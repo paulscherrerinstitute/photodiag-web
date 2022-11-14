@@ -2,9 +2,10 @@ import logging
 import sys
 from io import StringIO
 
+import panel_jitter  # pylint: disable=import-error
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
-from bokeh.models import TextAreaInput
+from bokeh.models import Tabs, TextAreaInput
 
 doc = curdoc()
 
@@ -20,7 +21,9 @@ bokeh_log_textareainput = TextAreaInput(title="server output:", height=150, widt
 
 
 # Final layout
-doc.add_root(column(row(stdout_textareainput, bokeh_log_textareainput)))
+doc.add_root(
+    column(Tabs(tabs=[panel_jitter.create()]), row(stdout_textareainput, bokeh_log_textareainput))
+)
 
 
 def update_stdout():
