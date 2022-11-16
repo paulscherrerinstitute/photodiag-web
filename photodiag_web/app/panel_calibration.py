@@ -3,22 +3,8 @@ import time
 import epics
 import numpy as np
 from bokeh.layouts import column, row
-from bokeh.models import (
-    BasicTicker,
-    Button,
-    ColumnDataSource,
-    DataRange1d,
-    Grid,
-    Legend,
-    Line,
-    LinearAxis,
-    Plot,
-    Scatter,
-    Select,
-    Spacer,
-    Spinner,
-    TabPanel,
-)
+from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel
+from bokeh.plotting import figure
 from cam_server_client import PipelineClient
 from scipy.optimize import curve_fit
 
@@ -162,73 +148,41 @@ def fit(xdata, ydata):
 
 
 def create():
-    # horiz_plot
-    horiz_plot = Plot(
-        x_range=DataRange1d(),
-        y_range=DataRange1d(),
+    # horiz figure
+    horiz_fig = figure(
+        x_axis_label=PBPS_x_PV_name,
+        y_axis_label="Ir-Il/Ir+Il",
         height=300,
         width=500,
-        toolbar_location="left",
+        tools="pan,wheel_zoom,save,reset",
     )
-
-    horiz_plot.toolbar.logo = None
-
-    horiz_plot.add_layout(LinearAxis(axis_label=PBPS_x_PV_name), place="below")
-    horiz_plot.add_layout(
-        LinearAxis(axis_label="Ir-Il/Ir+Il", major_label_orientation="vertical"), place="left"
-    )
-
-    horiz_plot.add_layout(Grid(dimension=0, ticker=BasicTicker()))
-    horiz_plot.add_layout(Grid(dimension=1, ticker=BasicTicker()))
 
     horiz_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    horiz_scatter = horiz_plot.add_glyph(
-        horiz_scatter_source, Scatter(x="x", y="y", line_color="blue", fill_color="blue")
-    )
+    horiz_fig.circle(x="x", y="y", source=horiz_scatter_source, legend_label="data")
 
     horiz_line_source = ColumnDataSource(dict(x=[], y=[]))
-    horiz_line = horiz_plot.add_glyph(horiz_line_source, Line(x="x", y="y", line_color="red"))
+    horiz_fig.line(x="x", y="y", source=horiz_line_source, legend_label="fit")
 
-    horiz_plot.add_layout(
-        Legend(
-            items=[("data", [horiz_scatter]), ("fit", [horiz_line])],
-            location="top_left",
-            click_policy="hide",
-        )
-    )
+    horiz_fig.toolbar.logo = None
+    horiz_fig.plot.legend.click_policy = "hide"
 
     # vert_plot
-    vert_plot = Plot(
-        x_range=DataRange1d(), y_range=DataRange1d(), height=300, width=500, toolbar_location="left"
+    vert_fig = figure(
+        x_axis_label=PBPS_y_PV_name,
+        y_axis_label="Iu-Id/Iu+Id",
+        height=300,
+        width=500,
+        tools="pan,wheel_zoom,save,reset",
     )
-
-    vert_plot.toolbar.logo = None
-
-    vert_plot.add_layout(LinearAxis(axis_label=PBPS_y_PV_name), place="below")
-    vert_plot.add_layout(
-        LinearAxis(axis_label="Iu-Id/Iu+Id", major_label_orientation="vertical"), place="left"
-    )
-
-    vert_plot.add_layout(Grid(dimension=0, ticker=BasicTicker()))
-    vert_plot.add_layout(Grid(dimension=1, ticker=BasicTicker()))
 
     vert_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    vert_scatter = vert_plot.add_glyph(
-        vert_scatter_source, Scatter(x="x", y="y", line_color="blue", fill_color="blue")
-    )
+    vert_fig.circle(x="x", y="y", source=vert_scatter_source, legend_label="data")
 
     vert_line_source = ColumnDataSource(dict(x=[], y=[]))
-    vert_line = vert_plot.add_glyph(
-        vert_line_source, Scatter(x="x", y="y", line_color="red", fill_color="red")
-    )
+    vert_fig.line(x="x", y="y", source=vert_line_source, legend_label="fit")
 
-    vert_plot.add_layout(
-        Legend(
-            items=[("data", [vert_scatter]), ("fit", [vert_line])],
-            location="top_left",
-            click_policy="hide",
-        )
-    )
+    vert_fig.toolbar.logo = None
+    vert_fig.plot.legend.click_policy = "hide"
 
     device_select = Select(title="Device:", value=DEVICES[0], options=DEVICES)
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=500, step=100, low=100)
@@ -344,7 +298,7 @@ def create():
     push_elog_button = Button(label="Push elog", disabled=True)
 
     tab_layout = column(
-        row(horiz_plot, vert_plot),
+        row(horiz_fig, vert_fig),
         row(
             device_select,
             num_shots_spinner,
