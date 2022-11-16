@@ -2,134 +2,87 @@ import bsread
 import numpy as np
 import pandas as pd
 from bokeh.layouts import column, row
-from bokeh.models import (
-    BasicTicker,
-    Button,
-    ColumnDataSource,
-    DataRange1d,
-    Div,
-    Grid,
-    Legend,
-    LinearAxis,
-    Plot,
-    Scatter,
-    Select,
-    Spacer,
-    Spinner,
-    Switch,
-    TabPanel,
-)
+from bokeh.models import Button, ColumnDataSource, Div, Select, Spacer, Spinner, Switch, TabPanel
+from bokeh.plotting import figure
 
 from photodiag_web import DEVICES
 
 
 def create():
-    # yx_plot
-    yx_plot = Plot(
-        x_range=DataRange1d(),
-        y_range=DataRange1d(),
+    # yx figure
+    yx_fig = figure(
+        x_axis_label="XPOS",
+        y_axis_label="YPOS",
         height=300,
         width=500,
-        toolbar_location="left",
+        tools="pan,wheel_zoom,save,reset",
     )
-
-    yx_plot.toolbar.logo = None
-
-    yx_plot.add_layout(LinearAxis(axis_label="XPOS"), place="below")
-    yx_plot.add_layout(
-        LinearAxis(axis_label="YPOS", major_label_orientation="vertical"), place="left"
-    )
-
-    yx_plot.add_layout(Grid(dimension=0, ticker=BasicTicker()))
-    yx_plot.add_layout(Grid(dimension=1, ticker=BasicTicker()))
 
     yx_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    yx_even_scatter = yx_plot.add_glyph(
-        yx_even_scatter_source, Scatter(x="x", y="y", line_color="blue", fill_color="blue")
-    )
+    yx_fig.circle(x="x", y="y", source=yx_even_scatter_source, legend_label="even")
 
     yx_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    yx_odd_scatter = yx_plot.add_glyph(
-        yx_odd_scatter_source, Scatter(x="x", y="y", line_color="red", fill_color="red")
+    yx_fig.circle(
+        x="x",
+        y="y",
+        source=yx_odd_scatter_source,
+        line_color="red",
+        fill_color="red",
+        legend_label="odd",
     )
 
-    yx_plot.add_layout(
-        Legend(
-            items=[("even", [yx_even_scatter]), ("odd", [yx_odd_scatter])],
-            location="top_left",
-            click_policy="hide",
-        )
-    )
+    yx_fig.plot.toolbar.logo = None
+    yx_fig.plot.legend.click_policy = "hide"
 
-    # ix_plot
-    ix_plot = Plot(
-        x_range=DataRange1d(), y_range=DataRange1d(), height=300, width=500, toolbar_location="left"
-    )
-
-    ix_plot.toolbar.logo = None
-
-    ix_plot.add_layout(LinearAxis(axis_label="INT"), place="below")
-    ix_plot.add_layout(
-        LinearAxis(axis_label="XPOS", major_label_orientation="vertical"), place="left"
-    )
-
-    ix_plot.add_layout(Grid(dimension=0, ticker=BasicTicker()))
-    ix_plot.add_layout(Grid(dimension=1, ticker=BasicTicker()))
-
-    ix_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    ix_even_scatter = ix_plot.add_glyph(
-        ix_even_scatter_source, Scatter(x="x", y="y", line_color="blue", fill_color="blue")
-    )
-
-    ix_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    ix_odd_scatter = ix_plot.add_glyph(
-        ix_odd_scatter_source, Scatter(x="x", y="y", line_color="red", fill_color="red")
-    )
-
-    ix_plot.add_layout(
-        Legend(
-            items=[("even", [ix_even_scatter]), ("odd", [ix_odd_scatter])],
-            location="top_left",
-            click_policy="hide",
-        )
-    )
-
-    # iy_plot
-    iy_plot = Plot(
-        x_range=DataRange1d(),
-        y_range=DataRange1d(),
+    # ix figure
+    ix_fig = figure(
+        x_axis_label="INT",
+        y_axis_label="XPOS",
         height=300,
         width=500,
-        toolbar_location="left",
+        tools="pan,wheel_zoom,save,reset",
     )
 
-    iy_plot.toolbar.logo = None
+    ix_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    ix_fig.circle(x="x", y="y", source=ix_even_scatter_source, legend_label="even")
 
-    iy_plot.add_layout(LinearAxis(axis_label="INT"), place="below")
-    iy_plot.add_layout(
-        LinearAxis(axis_label="YPOS", major_label_orientation="vertical"), place="left"
+    ix_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    ix_fig.circle(
+        x="x",
+        y="y",
+        source=ix_odd_scatter_source,
+        line_color="red",
+        fill_color="red",
+        legend_label="odd",
     )
 
-    iy_plot.add_layout(Grid(dimension=0, ticker=BasicTicker()))
-    iy_plot.add_layout(Grid(dimension=1, ticker=BasicTicker()))
+    ix_fig.plot.toolbar.logo = None
+    ix_fig.plot.legend.click_policy = "hide"
+
+    # iy figure
+    iy_fig = figure(
+        x_axis_label="INT",
+        y_axis_label="YPOS",
+        height=300,
+        width=500,
+        tools="pan,wheel_zoom,save,reset",
+    )
 
     iy_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    iy_even_scatter = iy_plot.add_glyph(
-        iy_even_scatter_source, Scatter(x="x", y="y", line_color="blue", fill_color="blue")
-    )
+    iy_fig.circle(x="x", y="y", source=iy_even_scatter_source, legend_label="even")
 
     iy_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    iy_odd_scatter = iy_plot.add_glyph(
-        iy_odd_scatter_source, Scatter(x="x", y="y", line_color="red", fill_color="red")
+    iy_fig.circle(
+        x="x",
+        y="y",
+        source=iy_odd_scatter_source,
+        line_color="red",
+        fill_color="red",
+        legend_label="odd",
     )
 
-    iy_plot.add_layout(
-        Legend(
-            items=[("even", [iy_even_scatter]), ("odd", [iy_odd_scatter])],
-            location="top_left",
-            click_policy="hide",
-        )
-    )
+    iy_fig.plot.toolbar.logo = None
+    iy_fig.plot.legend.click_policy = "hide"
 
     def _get_bs_data(channels, numshots):
         tmp_data = np.zeros([numshots, len(channels) + 1])
@@ -188,7 +141,7 @@ def create():
     push_elog_button = Button(label="Push elog", disabled=True)
 
     tab_layout = column(
-        row(yx_plot, ix_plot, iy_plot),
+        row(yx_fig, ix_fig, iy_fig),
         row(
             device_select,
             num_shots_spinner,
@@ -198,8 +151,8 @@ def create():
                     update_button,
                     column(Spacer(height=6), row(continuous_switch, continuous_div)),
                     push_elog_button,
-                )
-            )
+                ),
+            ),
         ),
     )
 
