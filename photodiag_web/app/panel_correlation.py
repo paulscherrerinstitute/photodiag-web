@@ -2,23 +2,8 @@ import bsread
 import numpy as np
 import pandas as pd
 from bokeh.layouts import column, row
-from bokeh.models import (
-    BasicTicker,
-    Button,
-    ColumnDataSource,
-    DataRange1d,
-    Div,
-    Grid,
-    Legend,
-    LinearAxis,
-    Plot,
-    Scatter,
-    Select,
-    Spacer,
-    Spinner,
-    Switch,
-    TabPanel,
-)
+from bokeh.models import Button, ColumnDataSource, Div, Select, Spacer, Spinner, Switch, TabPanel
+from bokeh.plotting import figure
 
 from photodiag_web import DEVICES
 
@@ -28,112 +13,80 @@ def create():
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
     device2_select = Select(title="Device #2:", value=DEVICES[1], options=DEVICES)
 
-    # xcorr_plot
-    xcorr_plot = Plot(
-        x_range=DataRange1d(),
-        y_range=DataRange1d(),
+    # xcorr figure
+    xcorr_plot = figure(
+        x_axis_label="XPOS",
+        y_axis_label="XPOS2",
         height=300,
         width=500,
-        toolbar_location="left",
+        tools="pan,wheel_zoom,save,reset",
+    )
+
+    xcorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    xcorr_plot.circle(x="x", y="y", source=xcorr_even_scatter_source, legend_label="even")
+
+    xcorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    xcorr_plot.circle(
+        x="x",
+        y="y",
+        source=xcorr_odd_scatter_source,
+        line_color="red",
+        fill_color="red",
+        legend_label="odd",
     )
 
     xcorr_plot.toolbar.logo = None
+    xcorr_plot.plot.legend.click_policy = "hide"
 
-    xcorr_plot.add_layout(LinearAxis(axis_label="XPOS"), place="below")
-    xcorr_plot.add_layout(
-        LinearAxis(axis_label="XPOS2", major_label_orientation="vertical"), place="left"
+    # ycorr figure
+    ycorr_plot = figure(
+        x_axis_label="YPOS",
+        y_axis_label="YPOS2",
+        height=300,
+        width=500,
+        tools="pan,wheel_zoom,save,reset",
     )
 
-    xcorr_plot.add_layout(Grid(dimension=0, ticker=BasicTicker()))
-    xcorr_plot.add_layout(Grid(dimension=1, ticker=BasicTicker()))
+    ycorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    ycorr_plot.circle(x="x", y="y", source=ycorr_even_scatter_source, legend_label="even")
 
-    xcorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    xcorr_even_scatter = xcorr_plot.add_glyph(
-        xcorr_even_scatter_source, Scatter(x="x", y="y", line_color="blue", fill_color="blue")
-    )
-
-    xcorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    xcorr_odd_scatter = xcorr_plot.add_glyph(
-        xcorr_odd_scatter_source, Scatter(x="x", y="y", line_color="red", fill_color="red")
-    )
-
-    xcorr_plot.add_layout(
-        Legend(
-            items=[("even", [xcorr_even_scatter]), ("odd", [xcorr_odd_scatter])],
-            location="top_left",
-            click_policy="hide",
-        )
-    )
-
-    # ycorr_plot
-    ycorr_plot = Plot(
-        x_range=DataRange1d(), y_range=DataRange1d(), height=300, width=500, toolbar_location="left"
+    ycorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    ycorr_plot.circle(
+        x="x",
+        y="y",
+        source=ycorr_odd_scatter_source,
+        line_color="red",
+        fill_color="red",
+        legend_label="odd",
     )
 
     ycorr_plot.toolbar.logo = None
+    ycorr_plot.plot.legend.click_policy = "hide"
 
-    ycorr_plot.add_layout(LinearAxis(axis_label="YPOS"), place="below")
-    ycorr_plot.add_layout(
-        LinearAxis(axis_label="YPOS2", major_label_orientation="vertical"), place="left"
-    )
-
-    ycorr_plot.add_layout(Grid(dimension=0, ticker=BasicTicker()))
-    ycorr_plot.add_layout(Grid(dimension=1, ticker=BasicTicker()))
-
-    ycorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    ycorr_even_scatter = ycorr_plot.add_glyph(
-        ycorr_even_scatter_source, Scatter(x="x", y="y", line_color="blue", fill_color="blue")
-    )
-
-    ycorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    ycorr_odd_scatter = ycorr_plot.add_glyph(
-        ycorr_odd_scatter_source, Scatter(x="x", y="y", line_color="red", fill_color="red")
-    )
-
-    ycorr_plot.add_layout(
-        Legend(
-            items=[("even", [ycorr_even_scatter]), ("odd", [ycorr_odd_scatter])],
-            location="top_left",
-            click_policy="hide",
-        )
-    )
-
-    # icorr_plot
-    icorr_plot = Plot(
-        x_range=DataRange1d(),
-        y_range=DataRange1d(),
+    # icorr figure
+    icorr_plot = figure(
+        x_axis_label="INT",
+        y_axis_label="INT2",
         height=300,
         width=500,
-        toolbar_location="left",
+        tools="pan,wheel_zoom,save,reset",
+    )
+
+    icorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    icorr_plot.circle(x="x", y="y", source=icorr_even_scatter_source, legend_label="even")
+
+    icorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    icorr_plot.circle(
+        x="x",
+        y="y",
+        source=icorr_odd_scatter_source,
+        line_color="red",
+        fill_color="red",
+        legend_label="odd",
     )
 
     icorr_plot.toolbar.logo = None
-
-    icorr_plot.add_layout(LinearAxis(axis_label="INT"), place="below")
-    icorr_plot.add_layout(
-        LinearAxis(axis_label="INT2", major_label_orientation="vertical"), place="left"
-    )
-
-    icorr_plot.add_layout(Grid(dimension=0, ticker=BasicTicker()))
-    icorr_plot.add_layout(Grid(dimension=1, ticker=BasicTicker()))
-
-    icorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    icorr_even_scatter = icorr_plot.add_glyph(
-        icorr_even_scatter_source, Scatter(x="x", y="y", line_color="blue", fill_color="blue")
-    )
-
-    icorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    icorr_odd_scatter = icorr_plot.add_glyph(
-        icorr_odd_scatter_source, Scatter(x="x", y="y", line_color="red", fill_color="red")
-    )
-
-    icorr_plot.add_layout(
-        Legend(
-            items=[("even", [icorr_even_scatter]), ("odd", [icorr_odd_scatter])],
-            location="top_left",
-            click_policy="hide",
-        )
-    )
+    icorr_plot.plot.legend.click_policy = "hide"
 
     def _get_bs_data(channels, numshots):
         tmp_data = np.zeros([numshots, len(channels) + 1])
