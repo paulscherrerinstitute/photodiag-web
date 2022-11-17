@@ -10,6 +10,7 @@ from bokeh.layouts import column, row
 from bokeh.models import Tabs, TextAreaInput
 
 doc = curdoc()
+doc.title = "photodiag-web"
 
 sys.stdout = StringIO()
 stdout_textareainput = TextAreaInput(title="print output:", height=150, width=750)
