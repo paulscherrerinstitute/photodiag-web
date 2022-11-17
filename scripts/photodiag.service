@@ -1,12 +1,11 @@
 [Unit]
-Description=phmon web server
+Description=photodiag web server
 
 [Service]
 Type=simple
 User=photodiag
-ExecStart=/bin/bash /usr/local/sbin/phmon.sh
+ExecStart=/bin/bash /usr/local/sbin/photodiag.sh
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
-
