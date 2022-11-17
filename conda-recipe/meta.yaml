@@ -1,0 +1,30 @@
+{% set data = load_setup_py_data() %}
+
+package:
+  name: photodiag_web
+  version: {{ data['version'] }}
+
+source:
+  path: ..
+
+build:
+  noarch: python
+  number: 0
+
+requirements:
+  build:
+    - python >=3.8
+    - setuptools
+  run:
+    - python >=3.8
+    - scipy
+    - bokeh =3
+    - bsread
+    - pyepics
+    - cam_server_client
+
+about:
+  home: https://github.com/paulscherrerinstitute/photodiag_web
+  summary: {{ data['description'] }}
+  license: GNU GPLv3
+  license_file: LICENSE
