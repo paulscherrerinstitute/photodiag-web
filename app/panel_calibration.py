@@ -13,32 +13,9 @@ from photodiag_web import DEVICES
 TARGETS = ["target1", "target2", "target3"]
 scan_x_range = np.linspace(-0.3, 0.3, 3)
 scan_y_range = np.linspace(-0.3, 0.3, 3)
+
 client = PipelineClient()
-
-channels = [
-    "SAROP11-CVME-PBPS2:Lnk9Ch11-DATA-SUM",
-    "SAROP11-CVME-PBPS2:Lnk9Ch13-DATA-SUM",
-    "SAROP11-CVME-PBPS2:Lnk9Ch14-DATA-SUM",
-    "SAROP11-CVME-PBPS2:Lnk9Ch15-DATA-SUM",
-]
-
-device_prefix = "SAROP11-PBPS110:"
-
-pipeline_name = "SAROP11-PBPS110_proc"
-
-PBPS_x_PV_name = device_prefix + "MOTOR_X1.VAL"
-PBPS_y_PV_name = device_prefix + "MOTOR_Y1.VAL"
-
-PBPS_x_PV = epics.PV(PBPS_x_PV_name)
-PBPS_y_PV = epics.PV(PBPS_y_PV_name)
-
-
-def set_PBPS_x(pos):
-    PBPS_x_PV.put(pos, wait=True)
-
-
-def set_PBPS_y(pos):
-    PBPS_y_PV.put(pos, wait=True)
+config = None
 
 
 def make_arrays(pvs, n_pulses):
@@ -75,7 +52,7 @@ def PBPS_get_data(channels, n_pulses=100, wait_time=0.5):
     for i, pv in enumerate(pvs):
         pv.add_callback(callback=on_value_change, pv=pv, ichannel=i)
 
-    if not np.all(counters == n_pulses):
+    while not np.all(counters == n_pulses):
         time.sleep(wait_time)
 
     return arrays
@@ -96,31 +73,39 @@ def get_shape(v):
 
 
 def PBPS_x_scan(scan_x_range, channels, numShots):
+    PBPS_x_PV = epics.PV(_get_device_prefix() + "MOTOR_X1.VAL")
+
     scan_mean = []
     scan_std = []
     scan_all = []
 
     for pos in scan_x_range:
-        set_PBPS_x(pos)
+        PBPS_x_PV.put(pos, wait=True)
         data = PBPS_get_data(channels, numShots)
         scan_mean.append([i.mean() for i in data])
         scan_std.append([i.std() for i in data])
         scan_all.append(data)
+
+    PBPS_x_PV.put(0, wait=True)
 
     return np.asarray(scan_mean), np.asarray(scan_std), np.asarray(scan_all)
 
 
 def PBPS_y_scan(scan_y_range, channels, numShots):
+    PBPS_y_PV = epics.PV(_get_device_prefix() + "MOTOR_Y1.VAL")
+
     scan_mean = []
     scan_std = []
     scan_all = []
 
     for pos in scan_y_range:
-        set_PBPS_y(pos)
+        PBPS_y_PV.put(pos, wait=True)
         data = PBPS_get_data(channels, numShots)
         scan_mean.append([i.mean() for i in data])
         scan_std.append([i.std() for i in data])
         scan_all.append(data)
+
+    PBPS_y_PV.put(0, wait=True)
 
     return np.asarray(scan_mean), np.asarray(scan_std), np.asarray(scan_all)
 
@@ -147,10 +132,22 @@ def fit(xdata, ydata):
     return popt
 
 
+def _get_device_name():
+    return config["name"][:-5]  # remove "_proc" suffix
+
+
+def _get_device_prefix():
+    return _get_device_name() + ":"
+
+
+def _set_epics_PV(name, value):
+    epics.PV(_get_device_prefix() + name).put(bytes(str(value), "utf8"))
+
+
 def create():
     # horiz figure
     horiz_fig = figure(
-        x_axis_label=PBPS_x_PV_name,
+        x_axis_label="MOTOR_X1.VAL",
         y_axis_label="Ir-Il/Ir+Il",
         height=300,
         width=500,
@@ -168,7 +165,7 @@ def create():
 
     # vert_plot
     vert_fig = figure(
-        x_axis_label=PBPS_y_PV_name,
+        x_axis_label="MOTOR_Y1.VAL",
         y_axis_label="Iu-Id/Iu+Id",
         height=300,
         width=500,
@@ -184,24 +181,26 @@ def create():
     vert_fig.toolbar.logo = None
     vert_fig.plot.legend.click_policy = "hide"
 
-    device_select = Select(title="Device:", value=DEVICES[0], options=DEVICES)
+    def device_select_callback(_attr, _old, new):
+        global config
+        config = client.get_instance_config(new + "_proc")
+
+    device_select = Select(title="Device:", options=DEVICES)
+    device_select.on_change("value", device_select_callback)
+    device_select.value = DEVICES[0]
+
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=500, step=100, low=100)
     target_select = Select(title="Target:", value=TARGETS[0], options=TARGETS, disabled=True)
-    norm_diodes = np.zeros((1, 4))
-    scan_x_norm = None
-    scan_y_norm = None
 
     def calibrate_button_callback():
-        nonlocal norm_diodes, scan_x_norm, scan_y_norm
         numShots = num_shots_spinner.value
+        channels = [config["down"], config["up"], config["right"], config["left"]]
+
         scan_I_mean, _, _ = PBPS_I_calibrate(channels, numShots)
         norm_diodes = np.asarray([1 / tm / 4 for tm in scan_I_mean])
 
         scan_x_mean, _, _ = PBPS_x_scan(scan_x_range, channels, numShots)
-        set_PBPS_x(0)
-
         scan_y_mean, _, _ = PBPS_y_scan(scan_y_range, channels, numShots)
-        set_PBPS_y(0)
 
         scan_x_norm = (
             scan_x_mean[:, 3] * norm_diodes[0, 3] - scan_x_mean[:, 2] * norm_diodes[0, 2]
@@ -221,73 +220,73 @@ def create():
         vert_scatter_source.data.update(x=scan_y_range, y=scan_y_norm)
         vert_line_source.data.update(x=scan_y_range, y=lin_fit(scan_y_range, *popt_norm_y))
 
+        # Update config
+        config["down_calib"] = norm_diodes[0, 0]
+        config["up_calib"] = norm_diodes[0, 1]
+        config["right_calib"] = norm_diodes[0, 2]
+        config["left_calib"] = norm_diodes[0, 3]
+        config["vert_calib"] = (scan_y_range[1] - scan_y_range[0]) / np.diff(scan_y_norm).mean()
+        config["horiz_calib"] = (scan_x_range[1] - scan_x_range[0]) / np.diff(scan_x_norm).mean()
+
     calibrate_button = Button(label="Calibrate", button_type="primary")
     calibrate_button.on_click(calibrate_button_callback)
 
     def push_results_button_callback():
-        # Intensity
-        # Set channels
-        # Input data
-        epics.PV(device_prefix + "INTENSITY.INPA").put(bytes(channels[0], "utf8"))
-        epics.PV(device_prefix + "INTENSITY.INPB").put(bytes(channels[1], "utf8"))
-        epics.PV(device_prefix + "INTENSITY.INPC").put(bytes(channels[2], "utf8"))
-        epics.PV(device_prefix + "INTENSITY.INPD").put(bytes(channels[3], "utf8"))
-        # Calibration values
-        epics.PV(device_prefix + "INTENSITY.E").put(bytes(str(norm_diodes[0, 0]), "utf8"))
-        epics.PV(device_prefix + "INTENSITY.F").put(bytes(str(norm_diodes[0, 1]), "utf8"))
-        epics.PV(device_prefix + "INTENSITY.G").put(bytes(str(norm_diodes[0, 2]), "utf8"))
-        epics.PV(device_prefix + "INTENSITY.H").put(bytes(str(norm_diodes[0, 3]), "utf8"))
-        # Calculation
-        epics.PV(device_prefix + "INTENSITY.CALC").put(bytes("A*E+B*F+C*G+D*H", "utf8"))
+        if device_select.value not in ("SAROP31-PBPS113", "SAROP31-PBPS149"):
+            dev_pref = _get_device_prefix()
+            # Intensity
+            # Set channels
+            # Input data
+            _set_epics_PV("INTENSITY.INPA", config["down"])
+            _set_epics_PV("INTENSITY.INPB", config["up"])
+            _set_epics_PV("INTENSITY.INPC", config["right"])
+            _set_epics_PV("INTENSITY.INPD", config["left"])
+            # Calibration values
+            _set_epics_PV("INTENSITY.E", config["down_calib"])
+            _set_epics_PV("INTENSITY.F", config["up_calib"])
+            _set_epics_PV("INTENSITY.G", config["right_calib"])
+            _set_epics_PV("INTENSITY.H", config["left_calib"])
+            # Calculation
+            _set_epics_PV("INTENSITY.CALC", "A*E+B*F+C*G+D*H")
 
-        # XPOS
-        # Set channels
-        epics.PV(device_prefix + "XPOS.INPA").put(bytes(channels[2], "utf8"))
-        epics.PV(device_prefix + "XPOS.INPB").put(bytes(channels[3], "utf8"))
-        # Threshold value
-        epics.PV(device_prefix + "XPOS.D").put(bytes(str(0.2), "utf8"))
-        # Diode calibration value
-        epics.PV(device_prefix + "XPOS.E").put(bytes(str(norm_diodes[0, 2]), "utf8"))
-        epics.PV(device_prefix + "XPOS.F").put(bytes(str(norm_diodes[0, 3]), "utf8"))
-        # Null value
-        epics.PV(device_prefix + "XPOS.G").put(bytes(str(0), "utf8"))
-        # Position calibration value
-        epics.PV(device_prefix + "XPOS.I").put(
-            bytes(str((scan_x_range[1] - scan_x_range[0]) / np.diff(scan_x_norm).mean()), "utf8")
-        )
-        # Intensity threshold value
-        epics.PV(device_prefix + "XPOS.INPJ").put(bytes(device_prefix + "INTENSITY", "utf8"))
-        # Calculation
-        epics.PV(device_prefix + "XPOS.CALC").put(bytes("J<D?G:I*(A*E-B*F)/(A*E+B*F)", "utf8"))
+            # YPOS
+            # Set channels
+            _set_epics_PV("YPOS.INPA", config["down"])
+            _set_epics_PV("YPOS.INPB", config["up"])
+            # Threshold value
+            _set_epics_PV("YPOS.D", 0.2)
+            # Diode calibration value
+            _set_epics_PV("YPOS.E", config["down_calib"])
+            _set_epics_PV("YPOS.F", config["up_calib"])
+            # Null value
+            _set_epics_PV("YPOS.G", 0)
+            # Position calibration value
+            _set_epics_PV("YPOS.I", config["vert_calib"])
+            # Intensity threshold value
+            _set_epics_PV("YPOS.INPJ", dev_pref + "INTENSITY")
+            # Calculation
+            _set_epics_PV("YPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
 
-        # YPOS
-        # Set channels
-        epics.PV(device_prefix + "YPOS.INPA").put(bytes(channels[0], "utf8"))
-        epics.PV(device_prefix + "YPOS.INPB").put(bytes(channels[1], "utf8"))
-        # Threshold value
-        epics.PV(device_prefix + "YPOS.D").put(bytes(str(0.2), "utf8"))
-        # Diode calibration value
-        epics.PV(device_prefix + "YPOS.E").put(bytes(str(norm_diodes[0, 0]), "utf8"))
-        epics.PV(device_prefix + "YPOS.F").put(bytes(str(norm_diodes[0, 1]), "utf8"))
-        # Null value
-        epics.PV(device_prefix + "YPOS.G").put(bytes(str(1), "utf8"))
-        # Position calibration value
-        epics.PV(device_prefix + "YPOS.I").put(
-            bytes(str((scan_y_range[1] - scan_y_range[0]) / np.diff(scan_y_norm).mean()), "utf8")
-        )
-        # Intensity threshold value
-        epics.PV(device_prefix + "YPOS.INPJ").put(bytes(device_prefix + "INTENSITY", "utf8"))
-        # Calculation
-        epics.PV(device_prefix + "YPOS.CALC").put(bytes("J<D?G:I*(A*E-B*F)/(A*E+B*F)", "utf8"))
+            # XPOS
+            # Set channels
+            _set_epics_PV("XPOS.INPA", config["right"])
+            _set_epics_PV("XPOS.INPB", config["left"])
+            # Threshold value
+            _set_epics_PV("XPOS.D", 0.2)
+            # Diode calibration value
+            _set_epics_PV("XPOS.E", config["right_calib"])
+            _set_epics_PV("XPOS.F", config["left_calib"])
+            # Null value
+            _set_epics_PV("XPOS.G", 0)
+            # Position calibration value
+            _set_epics_PV("XPOS.I", config["horiz_calib"])
+            # Intensity threshold value
+            _set_epics_PV("XPOS.INPJ", dev_pref + "INTENSITY")
+            # Calculation
+            _set_epics_PV("XPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
 
         # Push position calibration to pipeline
-        config = client.get_instance_config(pipeline_name)
-        config["right_calib"] = norm_diodes[0, 2]
-        config["left_calib"] = norm_diodes[0, 3]
-        config["up_calib"] = norm_diodes[0, 1]
-        config["down_calib"] = norm_diodes[0, 0]
-        config["vert_calib"] = (scan_y_range[1] - scan_y_range[0]) / np.diff(scan_y_norm).mean()
-        config["horiz_calib"] = (scan_x_range[1] - scan_x_range[0]) / np.diff(scan_x_norm).mean()
+        pipeline_name = config["name"]
         config["queue_length"] = 5000
         client.save_pipeline_config(pipeline_name, config)
         client.stop_instance(pipeline_name)
