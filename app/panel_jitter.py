@@ -11,8 +11,8 @@ from photodiag_web import DEVICES
 
 
 def create():
-    # yx figure
-    yx_fig = figure(
+    # xy figure
+    xy_fig = figure(
         x_axis_label="XPOS",
         y_axis_label="YPOS",
         height=300,
@@ -20,21 +20,21 @@ def create():
         tools="pan,wheel_zoom,save,reset",
     )
 
-    yx_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    yx_fig.circle(x="x", y="y", source=yx_even_scatter_source, legend_label="even")
+    even_scatter_source = ColumnDataSource(dict(x=[], y=[], i=[]))
+    odd_scatter_source = ColumnDataSource(dict(x=[], y=[], i=[]))
 
-    yx_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    yx_fig.circle(
+    xy_fig.circle(x="x", y="y", source=even_scatter_source, legend_label="even")
+    xy_fig.circle(
         x="x",
         y="y",
-        source=yx_odd_scatter_source,
+        source=odd_scatter_source,
         line_color="red",
         fill_color="red",
         legend_label="odd",
     )
 
-    yx_fig.plot.toolbar.logo = None
-    yx_fig.plot.legend.click_policy = "hide"
+    xy_fig.plot.toolbar.logo = None
+    xy_fig.plot.legend.click_policy = "hide"
 
     # ix figure
     ix_fig = figure(
@@ -45,14 +45,11 @@ def create():
         tools="pan,wheel_zoom,save,reset",
     )
 
-    ix_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    ix_fig.circle(x="x", y="y", source=ix_even_scatter_source, legend_label="even")
-
-    ix_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    ix_fig.circle(x="i", y="x", source=even_scatter_source, legend_label="even")
     ix_fig.circle(
-        x="x",
-        y="y",
-        source=ix_odd_scatter_source,
+        x="i",
+        y="x",
+        source=odd_scatter_source,
         line_color="red",
         fill_color="red",
         legend_label="odd",
@@ -70,14 +67,11 @@ def create():
         tools="pan,wheel_zoom,save,reset",
     )
 
-    iy_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    iy_fig.circle(x="x", y="y", source=iy_even_scatter_source, legend_label="even")
-
-    iy_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    iy_fig.circle(x="i", y="y", source=even_scatter_source, legend_label="even")
     iy_fig.circle(
-        x="x",
+        x="i",
         y="y",
-        source=iy_odd_scatter_source,
+        source=odd_scatter_source,
         line_color="red",
         fill_color="red",
         legend_label="odd",
@@ -109,24 +103,12 @@ def create():
             return
 
         data_array = np.array(buffer)
+        is_even = data_array[:, 0] == 0
+        data_even = data_array[is_even, :]
+        data_odd = data_array[~is_even, :]
 
-        data_even = data_array[data_array[:, 0] == 0, :]
-        xpos_even = data_even[:, 1]
-        ypos_even = data_even[:, 2]
-        intensity_even = data_even[:, 3]
-
-        data_odd = data_array[data_array[:, 0] == 1, :]
-        xpos_odd = data_odd[:, 1]
-        ypos_odd = data_odd[:, 2]
-        intensity_odd = data_odd[:, 3]
-
-        yx_even_scatter_source.data.update(x=xpos_even, y=ypos_even)
-        ix_even_scatter_source.data.update(x=intensity_even, y=xpos_even)
-        iy_even_scatter_source.data.update(x=intensity_even, y=ypos_even)
-
-        yx_odd_scatter_source.data.update(x=xpos_odd, y=ypos_odd)
-        ix_odd_scatter_source.data.update(x=intensity_odd, y=xpos_odd)
-        iy_odd_scatter_source.data.update(x=intensity_odd, y=ypos_odd)
+        even_scatter_source.data.update(x=data_even[:, 1], y=data_even[:, 2], i=data_even[:, 3])
+        odd_scatter_source.data.update(x=data_odd[:, 1], y=data_odd[:, 2], i=data_odd[:, 3])
 
     device_select = Select(title="Device:", value=DEVICES[0], options=DEVICES)
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
@@ -161,7 +143,7 @@ def create():
     push_elog_button = Button(label="Push elog", disabled=True)
 
     tab_layout = column(
-        row(yx_fig, ix_fig, iy_fig),
+        row(xy_fig, ix_fig, iy_fig),
         row(
             device_select,
             num_shots_spinner,
