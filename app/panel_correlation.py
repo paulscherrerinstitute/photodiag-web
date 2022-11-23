@@ -1,9 +1,11 @@
+from collections import deque
+from threading import Thread
+
 import bsread
 import numpy as np
-import pandas as pd
 from bokeh.layouts import column, row
-from bokeh.models import Button, ColumnDataSource, Div, Select, Spacer, Spinner, Switch, TabPanel
-from bokeh.plotting import figure
+from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel, Toggle
+from bokeh.plotting import curdoc, figure
 
 from photodiag_web import DEVICES
 
@@ -88,31 +90,12 @@ def create():
     icorr_plot.toolbar.logo = None
     icorr_plot.plot.legend.click_policy = "hide"
 
-    def _get_bs_data(channels, numshots):
-        tmp_data = np.zeros([numshots, len(channels) + 1])
-        with bsread.source(channels=channels) as stream:
-            for i in range(0, numshots):
-                message = stream.receive()
-                for ch_num, ch in enumerate(channels):
-                    tmp_data[i, ch_num] = message.data.data[ch].value
-                    tmp_data[i, len(channels)] = message.data.pulse_id
+    buffer = None
 
-        data_out = pd.DataFrame(columns=channels)
-        for ch_num, ch in enumerate(channels):
-            data_out[ch] = tmp_data[:, ch_num]
-        data_out["PulseID"] = tmp_data[:, len(channels)]
+    def collect_data():
+        nonlocal buffer
+        buffer = deque(maxlen=num_shots_spinner.value)
 
-        # add parity
-        vals = []
-        for ID in data_out["PulseID"]:
-            if ID % 2 == 0:
-                vals.append("Even")
-            else:
-                vals.append("Odd")
-        data_out["Parity"] = vals
-        return data_out
-
-    def update():
         device_name = device_select.value
         device2_name = device2_select.value
         intensity = device_name + ":INTENSITY"
@@ -122,32 +105,71 @@ def create():
         ypos = device_name + ":YPOS"
         ypos2 = device2_name + ":YPOS"
 
-        data = _get_bs_data(
-            [intensity, xpos, ypos, intensity2, xpos2, ypos2],
-            numshots=int(num_shots_spinner.value),
-        )
-        data_even = data[data["Parity"] == "Even"]
-        data_odd = data[data["Parity"] == "Odd"]
+        with bsread.source(channels=[intensity, xpos, ypos, intensity2, xpos2, ypos2]) as stream:
+            while update_toggle.active:
+                message = stream.receive()
+                is_odd = message.data.pulse_id % 2
+                data = message.data.data
+                buffer.append(
+                    (
+                        is_odd,
+                        data[xpos].value,
+                        data[ypos].value,
+                        data[intensity].value,
+                        data[xpos2].value,
+                        data[ypos2].value,
+                        data[intensity2].value,
+                    )
+                )
 
-        xcorr_even_scatter_source.data.update(x=data_even[xpos], y=data_even[xpos2])
-        ycorr_even_scatter_source.data.update(x=data_even[ypos], y=data_even[ypos2])
-        icorr_even_scatter_source.data.update(x=data_even[intensity], y=data_even[intensity2])
+    async def update_plots():
+        if not buffer:
+            return
 
-        xcorr_odd_scatter_source.data.update(x=data_odd[xpos], y=data_odd[xpos2])
-        ycorr_odd_scatter_source.data.update(x=data_odd[ypos], y=data_odd[ypos2])
-        icorr_odd_scatter_source.data.update(x=data_odd[intensity], y=data_odd[intensity2])
+        data_array = np.array(buffer)
+        is_even = data_array[:, 0] == 0
+        data_even = data_array[is_even, :]
+        data_odd = data_array[~is_even, :]
+
+        xcorr_even_scatter_source.data.update(x=data_even[:, 1], y=data_even[:, 4])
+        ycorr_even_scatter_source.data.update(x=data_even[:, 2], y=data_even[:, 5])
+        icorr_even_scatter_source.data.update(x=data_even[:, 3], y=data_even[:, 6])
+
+        xcorr_odd_scatter_source.data.update(x=data_odd[:, 1], y=data_odd[:, 4])
+        ycorr_odd_scatter_source.data.update(x=data_odd[:, 2], y=data_odd[:, 5])
+        icorr_odd_scatter_source.data.update(x=data_odd[:, 3], y=data_odd[:, 6])
 
     device_select = Select(title="Device:", value=DEVICES[0], options=DEVICES)
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
 
-    def update_toggle_callback():
-        update()
+    update_plots_periodic_callback = None
 
-    update_button = Button(label="Update", button_type="primary")
-    update_button.on_click(update_toggle_callback)
+    def update_toggle_callback(_attr, _old, new):
+        nonlocal update_plots_periodic_callback
+        if new:
+            thread = Thread(target=collect_data)
+            thread.start()
 
-    continuous_div = Div(text="Continuous")
-    continuous_switch = Switch(active=False, disabled=True)
+            update_plots_periodic_callback = curdoc().add_periodic_callback(update_plots, 1000)
+
+            device_select.disabled = True
+            device2_select.disabled = True
+            num_shots_spinner.disabled = True
+
+            update_toggle.label = "Stop"
+            update_toggle.button_type = "success"
+        else:
+            curdoc().remove_periodic_callback(update_plots_periodic_callback)
+
+            device_select.disabled = False
+            device2_select.disabled = False
+            num_shots_spinner.disabled = False
+
+            update_toggle.label = "Update"
+            update_toggle.button_type = "primary"
+
+    update_toggle = Toggle(label="Update", button_type="primary")
+    update_toggle.on_change("active", update_toggle_callback)
 
     push_elog_button = Button(label="Push elog", disabled=True)
 
@@ -157,14 +179,7 @@ def create():
             device_select,
             device2_select,
             num_shots_spinner,
-            column(
-                Spacer(height=18),
-                row(
-                    update_button,
-                    column(Spacer(height=6), row(continuous_switch, continuous_div)),
-                    push_elog_button,
-                ),
-            ),
+            column(Spacer(height=18), row(update_toggle, push_elog_button)),
         ),
     )
 
