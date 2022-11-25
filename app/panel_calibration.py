@@ -1,10 +1,12 @@
 import time
+from functools import partial
+from threading import Thread
 
 import epics
 import numpy as np
 from bokeh.layouts import column, row
 from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel
-from bokeh.plotting import figure
+from bokeh.plotting import curdoc, figure
 from cam_server_client import PipelineClient
 from scipy.optimize import curve_fit
 
@@ -124,6 +126,8 @@ def _set_epics_PV(name, value):
 
 
 def create():
+    doc = curdoc()
+
     # horiz figure
     horiz_fig = figure(
         x_axis_label="MOTOR_X1.VAL",
@@ -204,7 +208,14 @@ def create():
 
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=500, step=100, low=100)
 
-    def calibrate_button_callback():
+    async def _unlock():
+        device_select.disabled = False
+        num_shots_spinner.disabled = False
+        target_select.disabled = False
+        calibrate_button.disabled = False
+        push_results_button.disabled = False
+
+    def _calibrate():
         numShots = num_shots_spinner.value
         channels = [config["down"], config["up"], config["right"], config["left"]]
 
@@ -224,7 +235,9 @@ def create():
             scan_y_mean[:, 1] * norm_diodes[0, 1] - scan_y_mean[:, 0] * norm_diodes[0, 0]
         ) / (scan_y_mean[:, 1] * norm_diodes[0, 1] + scan_y_mean[:, 0] * norm_diodes[0, 0])
 
-        _update_plots(scan_x_range, scan_x_norm, scan_y_range, scan_y_norm)
+        doc.add_next_tick_callback(
+            partial(_update_plots, scan_x_range, scan_x_norm, scan_y_range, scan_y_norm)
+        )
 
         # Update config
         config["down_calib"] = norm_diodes[0, 0]
@@ -237,6 +250,18 @@ def create():
         config["calib_x_norm"] = scan_x_norm.tolist()
         config["calib_y_range"] = scan_y_range.tolist()
         config["calib_y_norm"] = scan_y_norm.tolist()
+
+        doc.add_next_tick_callback(_unlock)
+
+    def calibrate_button_callback():
+        device_select.disabled = True
+        num_shots_spinner.disabled = True
+        target_select.disabled = True
+        calibrate_button.disabled = True
+        push_results_button.disabled = True
+
+        thread = Thread(target=_calibrate)
+        thread.start()
 
     calibrate_button = Button(label="Calibrate", button_type="primary")
     calibrate_button.on_click(calibrate_button_callback)
