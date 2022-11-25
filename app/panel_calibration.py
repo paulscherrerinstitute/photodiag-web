@@ -160,6 +160,16 @@ def create():
     vert_fig.toolbar.logo = None
     vert_fig.plot.legend.click_policy = "hide"
 
+    def _update_plots(x_range, x_norm, y_range, y_norm):
+        popt_norm_x = fit(x_range, x_norm)
+        popt_norm_y = fit(y_range, y_norm)
+
+        # Update plots
+        horiz_scatter_source.data.update(x=x_range, y=x_norm)
+        horiz_line_source.data.update(x=x_range, y=lin_fit(x_range, *popt_norm_x))
+
+        vert_scatter_source.data.update(x=y_range, y=y_norm)
+        vert_line_source.data.update(x=y_range, y=lin_fit(y_range, *popt_norm_y))
 
     def target_select_callback(_attr, _old, new):
         targets_pv = epics.PV(_get_device_prefix() + "PROBE_SP")
@@ -179,6 +189,14 @@ def create():
         targets = list(targets_pv.enum_strs)
         target_select.options = targets
         target_select.value = targets[targets_pv.value]
+
+        # load calibration, if present
+        x_range = np.array(config.get("calib_x_range", []))
+        x_norm = np.array(config.get("calib_x_norm", []))
+        y_range = np.array(config.get("calib_y_range", []))
+        y_norm = np.array(config.get("calib_y_norm", []))
+        if x_range.size != 0 and x_norm.size != 0 and y_range.size != 0 and y_norm.size != 0:
+            _update_plots(x_range, x_norm, y_range, y_norm)
 
     device_select = Select(title="Device:", options=DEVICES)
     device_select.on_change("value", device_select_callback)
@@ -206,15 +224,7 @@ def create():
             scan_y_mean[:, 1] * norm_diodes[0, 1] - scan_y_mean[:, 0] * norm_diodes[0, 0]
         ) / (scan_y_mean[:, 1] * norm_diodes[0, 1] + scan_y_mean[:, 0] * norm_diodes[0, 0])
 
-        popt_norm_x = fit(scan_x_range, scan_x_norm)
-        popt_norm_y = fit(scan_y_range, scan_y_norm)
-
-        # Update plots
-        horiz_scatter_source.data.update(x=scan_x_range, y=scan_x_norm)
-        horiz_line_source.data.update(x=scan_x_range, y=lin_fit(scan_x_range, *popt_norm_x))
-
-        vert_scatter_source.data.update(x=scan_y_range, y=scan_y_norm)
-        vert_line_source.data.update(x=scan_y_range, y=lin_fit(scan_y_range, *popt_norm_y))
+        _update_plots(scan_x_range, scan_x_norm, scan_y_range, scan_y_norm)
 
         # Update config
         config["down_calib"] = norm_diodes[0, 0]
@@ -223,6 +233,10 @@ def create():
         config["left_calib"] = norm_diodes[0, 3]
         config["vert_calib"] = (scan_y_range[1] - scan_y_range[0]) / np.diff(scan_y_norm).mean()
         config["horiz_calib"] = (scan_x_range[1] - scan_x_range[0]) / np.diff(scan_x_norm).mean()
+        config["calib_x_range"] = scan_x_range.tolist()
+        config["calib_x_norm"] = scan_x_norm.tolist()
+        config["calib_y_range"] = scan_y_range.tolist()
+        config["calib_y_norm"] = scan_y_norm.tolist()
 
     calibrate_button = Button(label="Calibrate", button_type="primary")
     calibrate_button.on_click(calibrate_button_callback)
@@ -287,7 +301,7 @@ def create():
         client.save_pipeline_config(pipeline_name, config)
         client.stop_instance(pipeline_name)
 
-    push_results_button = Button(label="Push results", disabled=True)
+    push_results_button = Button(label="Push results")
     push_results_button.on_click(push_results_button_callback)
 
     push_elog_button = Button(label="Push elog", disabled=True)
