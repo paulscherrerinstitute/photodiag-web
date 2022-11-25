@@ -127,7 +127,7 @@ def create():
     # horiz figure
     horiz_fig = figure(
         x_axis_label="MOTOR_X1.VAL",
-        y_axis_label="Ir-Il/Ir+Il",
+        y_axis_label=r"$$I_r-I_l/I_r+I_l$$",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -145,7 +145,7 @@ def create():
     # vert_plot
     vert_fig = figure(
         x_axis_label="MOTOR_Y1.VAL",
-        y_axis_label="Iu-Id/Iu+Id",
+        y_axis_label=r"$$I_u-I_d/I_u+I_d$$",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
