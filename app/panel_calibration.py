@@ -35,8 +35,7 @@ def make_arrays(pvs, n_pulses):
 
 def PBPS_get_data(channels, n_pulses=100, wait_time=0.5):
     pvs = [epics.PV(ch) for ch in channels]
-    n_channels = len(channels)
-    counters = np.zeros(n_channels, dtype=int)
+    counters = np.zeros(len(channels), dtype=int)
 
     arrays = make_arrays(pvs, n_pulses)
 
@@ -72,40 +71,21 @@ def get_shape(v):
         return tuple()
 
 
-def PBPS_x_scan(scan_x_range, channels, numShots):
-    PBPS_x_PV = epics.PV(_get_device_prefix() + "MOTOR_X1.VAL")
+def pv_scan(pv_name, scan_range, channels, numShots):
+    pv = epics.PV(pv_name)
 
     scan_mean = []
     scan_std = []
     scan_all = []
 
-    for pos in scan_x_range:
-        PBPS_x_PV.put(pos, wait=True)
+    for pos in scan_range:
+        pv.put(pos, wait=True)
         data = PBPS_get_data(channels, numShots)
         scan_mean.append([i.mean() for i in data])
         scan_std.append([i.std() for i in data])
         scan_all.append(data)
 
-    PBPS_x_PV.put(0, wait=True)
-
-    return np.asarray(scan_mean), np.asarray(scan_std), np.asarray(scan_all)
-
-
-def PBPS_y_scan(scan_y_range, channels, numShots):
-    PBPS_y_PV = epics.PV(_get_device_prefix() + "MOTOR_Y1.VAL")
-
-    scan_mean = []
-    scan_std = []
-    scan_all = []
-
-    for pos in scan_y_range:
-        PBPS_y_PV.put(pos, wait=True)
-        data = PBPS_get_data(channels, numShots)
-        scan_mean.append([i.mean() for i in data])
-        scan_std.append([i.std() for i in data])
-        scan_all.append(data)
-
-    PBPS_y_PV.put(0, wait=True)
+    pv.put(0, wait=True)
 
     return np.asarray(scan_mean), np.asarray(scan_std), np.asarray(scan_all)
 
@@ -199,8 +179,10 @@ def create():
         scan_I_mean, _, _ = PBPS_I_calibrate(channels, numShots)
         norm_diodes = np.asarray([1 / tm / 4 for tm in scan_I_mean])
 
-        scan_x_mean, _, _ = PBPS_x_scan(scan_x_range, channels, numShots)
-        scan_y_mean, _, _ = PBPS_y_scan(scan_y_range, channels, numShots)
+        pv_x_name = _get_device_prefix() + "MOTOR_X1.VAL"
+        scan_x_mean, _, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
+        pv_y_name = _get_device_prefix() + "MOTOR_Y1.VAL"
+        scan_y_mean, _, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
 
         scan_x_norm = (
             scan_x_mean[:, 3] * norm_diodes[0, 3] - scan_x_mean[:, 2] * norm_diodes[0, 2]
