@@ -10,7 +10,6 @@ from scipy.optimize import curve_fit
 
 from photodiag_web import DEVICES
 
-TARGETS = ["target1", "target2", "target3"]
 scan_x_range = np.linspace(-0.3, 0.3, 3)
 scan_y_range = np.linspace(-0.3, 0.3, 3)
 
@@ -161,16 +160,31 @@ def create():
     vert_fig.toolbar.logo = None
     vert_fig.plot.legend.click_policy = "hide"
 
+
+    def target_select_callback(_attr, _old, new):
+        targets_pv = epics.PV(_get_device_prefix() + "PROBE_SP")
+        targets = list(targets_pv.enum_strs)
+        if targets_pv.value != targets.index(new):
+            targets_pv.put(targets.index(new), wait=True)
+
+    target_select = Select(title="Target:")
+    target_select.on_change("value", target_select_callback)
+
     def device_select_callback(_attr, _old, new):
         global config
         config = client.get_instance_config(new + "_proc")
+
+        # get target options
+        targets_pv = epics.PV(_get_device_prefix() + "PROBE_SP")
+        targets = list(targets_pv.enum_strs)
+        target_select.options = targets
+        target_select.value = targets[targets_pv.value]
 
     device_select = Select(title="Device:", options=DEVICES)
     device_select.on_change("value", device_select_callback)
     device_select.value = DEVICES[0]
 
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=500, step=100, low=100)
-    target_select = Select(title="Target:", value=TARGETS[0], options=TARGETS, disabled=True)
 
     def calibrate_button_callback():
         numShots = num_shots_spinner.value
