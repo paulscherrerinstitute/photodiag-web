@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 from functools import partial
 from threading import Thread
 
@@ -215,17 +216,37 @@ def create():
         calibrate_button.disabled = False
         push_results_button.disabled = False
 
+    async def _set_progress(step):
+        if step != 3:
+            calibrate_button.label = f"Step {step}/3"
+        else:
+            calibrate_button.label = "Calibrate"
+
+        if step == 0:
+            print("-----", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        elif step == 1:
+            print("Diode response calibrated")
+        elif step == 2:
+            print("Horizontal position calibrated")
+        elif step == 3:
+            print("Vertical position calibrated")
+
     def _calibrate():
         numShots = num_shots_spinner.value
         channels = [config["down"], config["up"], config["right"], config["left"]]
+        doc.add_next_tick_callback(partial(_set_progress, 0))
 
         scan_I_mean, _, _ = PBPS_I_calibrate(channels, numShots)
         norm_diodes = np.asarray([1 / tm / 4 for tm in scan_I_mean])
+        doc.add_next_tick_callback(partial(_set_progress, 1))
 
         pv_x_name = _get_device_prefix() + "MOTOR_X1.VAL"
         scan_x_mean, _, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
+        doc.add_next_tick_callback(partial(_set_progress, 2))
+
         pv_y_name = _get_device_prefix() + "MOTOR_Y1.VAL"
         scan_y_mean, _, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
+        doc.add_next_tick_callback(partial(_set_progress, 3))
 
         scan_x_norm = (
             scan_x_mean[:, 3] * norm_diodes[0, 3] - scan_x_mean[:, 2] * norm_diodes[0, 2]
