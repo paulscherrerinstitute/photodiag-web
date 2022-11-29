@@ -191,6 +191,12 @@ def create():
     target_select = Select(title="Target:")
     target_select.on_change("value", target_select_callback)
 
+    def _in_pos_callback(value, **_):
+        if value:
+            doc.add_next_tick_callback(_unlock_gui)
+        else:
+            doc.add_next_tick_callback(_lock_gui)
+
     def device_select_callback(_attr, _old, new):
         global config
         config = client.get_instance_config(new + "_proc")
@@ -200,6 +206,10 @@ def create():
         targets = list(targets_pv.enum_strs)
         target_select.options = targets
         target_select.value = targets[targets_pv.value]
+
+        # set IN_POS callback control
+        in_pos_pv = epics.PV(_get_device_prefix() + "IN_POS")
+        in_pos_pv.add_callback(_in_pos_callback)
 
         # load calibration, if present
         x_range = np.array(config.get("calib_x_range", []))
@@ -212,11 +222,17 @@ def create():
 
     device_select = Select(title="Device:", options=DEVICES)
     device_select.on_change("value", device_select_callback)
-    device_select.value = DEVICES[0]
 
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=500, step=100, low=100)
 
-    async def _unlock():
+    async def _lock_gui():
+        device_select.disabled = True
+        num_shots_spinner.disabled = True
+        target_select.disabled = True
+        calibrate_button.disabled = True
+        push_results_button.disabled = True
+
+    async def _unlock_gui():
         device_select.disabled = False
         num_shots_spinner.disabled = False
         target_select.disabled = False
@@ -288,14 +304,10 @@ def create():
         config["calib_y_norm"] = scan_y_norm.tolist()
         config["calib_datetime"] = calib_datetime
 
-        doc.add_next_tick_callback(_unlock)
+        doc.add_next_tick_callback(_unlock_gui)
 
     def calibrate_button_callback():
-        device_select.disabled = True
-        num_shots_spinner.disabled = True
-        target_select.disabled = True
-        calibrate_button.disabled = True
-        push_results_button.disabled = True
+        doc.add_next_tick_callback(_lock_gui)
 
         thread = Thread(target=_calibrate)
         thread.start()
@@ -367,6 +379,9 @@ def create():
     push_results_button.on_click(push_results_button_callback)
 
     push_elog_button = Button(label="Push elog", disabled=True)
+
+    # Trigger the initial device selection
+    device_select.value = DEVICES[0]
 
     tab_layout = column(
         row(horiz_fig, vert_fig),
