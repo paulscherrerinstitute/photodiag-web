@@ -18,6 +18,7 @@ scan_y_range = np.linspace(-0.3, 0.3, 3)
 
 client = PipelineClient()
 config = None
+targets_pv = None
 
 
 def make_arrays(pvs, n_pulses):
@@ -183,7 +184,6 @@ def create():
         vert_line_source.data.update(x=y_range, y=lin_fit(y_range, *popt_norm_y))
 
     def target_select_callback(_attr, _old, new):
-        targets_pv = epics.PV(_get_device_prefix() + "PROBE_SP")
         targets = list(targets_pv.enum_strs)
         if targets_pv.value != targets.index(new):
             targets_pv.put(targets.index(new), wait=True)
@@ -197,8 +197,14 @@ def create():
         else:
             doc.add_next_tick_callback(_lock_gui)
 
+    async def _update_target(value, enum_strs):
+        target_select.value = enum_strs[value]
+
+    def _probe_sp_callback(value, enum_strs, **_):
+        doc.add_next_tick_callback(partial(_update_target, value, enum_strs))
+
     def device_select_callback(_attr, _old, new):
-        global config
+        global config, targets_pv
         config = client.get_instance_config(new + "_proc")
 
         # get target options
@@ -206,6 +212,7 @@ def create():
         targets = list(targets_pv.enum_strs)
         target_select.options = targets
         target_select.value = targets[targets_pv.value]
+        targets_pv.add_callback(_probe_sp_callback)
 
         # set IN_POS callback control
         in_pos_pv = epics.PV(_get_device_prefix() + "IN_POS")
