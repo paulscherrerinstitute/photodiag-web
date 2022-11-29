@@ -131,6 +131,7 @@ def create():
 
     # horiz figure
     horiz_fig = figure(
+        title=" ",
         x_axis_label="MOTOR_X1.VAL",
         y_axis_label=r"$$I_r-I_l/I_r+I_l$$",
         height=300,
@@ -149,6 +150,7 @@ def create():
 
     # vert_plot
     vert_fig = figure(
+        title=" ",
         x_axis_label="MOTOR_Y1.VAL",
         y_axis_label=r"$$I_u-I_d/I_u+I_d$$",
         height=300,
@@ -165,7 +167,11 @@ def create():
     vert_fig.toolbar.logo = None
     vert_fig.plot.legend.click_policy = "hide"
 
-    def _update_plots(x_range, x_norm, y_range, y_norm):
+    def _update_plots(device, calib_datetime, x_range, x_norm, y_range, y_norm):
+        title = f"{device}, {calib_datetime}"
+        horiz_fig.title.text = title
+        vert_fig.title.text = title
+
         popt_norm_x = fit(x_range, x_norm)
         popt_norm_y = fit(y_range, y_norm)
 
@@ -200,8 +206,9 @@ def create():
         x_norm = np.array(config.get("calib_x_norm", []))
         y_range = np.array(config.get("calib_y_range", []))
         y_norm = np.array(config.get("calib_y_norm", []))
+        calib_datetime = config.get("calib_datetime", "")
         if x_range.size != 0 and x_norm.size != 0 and y_range.size != 0 and y_norm.size != 0:
-            _update_plots(x_range, x_norm, y_range, y_norm)
+            _update_plots(_get_device_name(), calib_datetime, x_range, x_norm, y_range, y_norm)
 
     device_select = Select(title="Device:", options=DEVICES)
     device_select.on_change("value", device_select_callback)
@@ -222,9 +229,7 @@ def create():
         else:
             calibrate_button.label = "Calibrate"
 
-        if step == 0:
-            print("-----", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        elif step == 1:
+        if step == 1:
             print("Diode response calibrated")
         elif step == 2:
             print("Horizontal position calibrated")
@@ -234,6 +239,8 @@ def create():
     def _calibrate():
         numShots = num_shots_spinner.value
         channels = [config["down"], config["up"], config["right"], config["left"]]
+        calib_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print("-----", calib_datetime)
         doc.add_next_tick_callback(partial(_set_progress, 0))
 
         scan_I_mean, _, _ = PBPS_I_calibrate(channels, numShots)
@@ -257,7 +264,15 @@ def create():
         ) / (scan_y_mean[:, 1] * norm_diodes[0, 1] + scan_y_mean[:, 0] * norm_diodes[0, 0])
 
         doc.add_next_tick_callback(
-            partial(_update_plots, scan_x_range, scan_x_norm, scan_y_range, scan_y_norm)
+            partial(
+                _update_plots,
+                _get_device_name(),
+                calib_datetime,
+                scan_x_range,
+                scan_x_norm,
+                scan_y_range,
+                scan_y_norm,
+            )
         )
 
         # Update config
@@ -271,6 +286,7 @@ def create():
         config["calib_x_norm"] = scan_x_norm.tolist()
         config["calib_y_range"] = scan_y_range.tolist()
         config["calib_y_norm"] = scan_y_norm.tolist()
+        config["calib_datetime"] = calib_datetime
 
         doc.add_next_tick_callback(_unlock)
 
