@@ -410,12 +410,14 @@ def create():
             _set_epics_PV("XPOS.INPJ", dev_pref + "INTENSITY")
             # Calculation
             _set_epics_PV("XPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
+            print("EPICS PVs updated")
 
         # Push position calibration to pipeline
         pipeline_name = config["name"]
         config["queue_length"] = 5000
         client.save_pipeline_config(pipeline_name, config)
         client.stop_instance(pipeline_name)
+        print("camera_server config updated")
 
     push_results_button = Button(label="Push results")
     push_results_button.on_click(push_results_button_callback)
