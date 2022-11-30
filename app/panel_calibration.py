@@ -6,10 +6,11 @@ from threading import Thread
 import epics
 import numpy as np
 from bokeh.layouts import column, row
-from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel
+from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel, Whisker
 from bokeh.plotting import curdoc, figure
 from cam_server_client import PipelineClient
 from scipy.optimize import curve_fit
+from uncertainties import unumpy
 
 from photodiag_web import DEVICES
 
@@ -140,8 +141,11 @@ def create():
         tools="pan,wheel_zoom,save,reset",
     )
 
-    horiz_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    horiz_scatter_source = ColumnDataSource(dict(x=[], y=[], upper=[], lower=[]))
     horiz_fig.circle(x="x", y="y", source=horiz_scatter_source, legend_label="data")
+    horiz_fig.add_layout(
+        Whisker(base="x", upper="upper", lower="lower", source=horiz_scatter_source)
+    )
 
     horiz_line_source = ColumnDataSource(dict(x=[], y=[]))
     horiz_fig.line(x="x", y="y", source=horiz_line_source, legend_label="fit")
@@ -159,8 +163,9 @@ def create():
         tools="pan,wheel_zoom,save,reset",
     )
 
-    vert_scatter_source = ColumnDataSource(dict(x=[], y=[]))
+    vert_scatter_source = ColumnDataSource(dict(x=[], y=[], upper=[], lower=[]))
     vert_fig.circle(x="x", y="y", source=vert_scatter_source, legend_label="data")
+    vert_fig.add_layout(Whisker(base="x", upper="upper", lower="lower", source=vert_scatter_source))
 
     vert_line_source = ColumnDataSource(dict(x=[], y=[]))
     vert_fig.line(x="x", y="y", source=vert_line_source, legend_label="fit")
@@ -168,7 +173,9 @@ def create():
     vert_fig.toolbar.logo = None
     vert_fig.plot.legend.click_policy = "hide"
 
-    def _update_plots(device, calib_datetime, x_range, x_norm, y_range, y_norm):
+    def _update_plots(
+        device, calib_datetime, x_range, x_norm, x_norm_std, y_range, y_norm, y_norm_std
+    ):
         title = f"{device}, {calib_datetime}"
         horiz_fig.title.text = title
         vert_fig.title.text = title
@@ -177,10 +184,14 @@ def create():
         popt_norm_y = fit(y_range, y_norm)
 
         # Update plots
-        horiz_scatter_source.data.update(x=x_range, y=x_norm)
+        x_upper = x_norm + x_norm_std if x_norm_std.size > 0 else x_norm
+        x_lower = x_norm - x_norm_std if x_norm_std.size > 0 else x_norm
+        horiz_scatter_source.data.update(x=x_range, y=x_norm, upper=x_upper, lower=x_lower)
         horiz_line_source.data.update(x=x_range, y=lin_fit(x_range, *popt_norm_x))
 
-        vert_scatter_source.data.update(x=y_range, y=y_norm)
+        y_upper = y_norm + y_norm_std if y_norm_std.size > 0 else y_norm
+        y_lower = y_norm - y_norm_std if y_norm_std.size > 0 else y_norm
+        vert_scatter_source.data.update(x=y_range, y=y_norm, upper=y_upper, lower=y_lower)
         vert_line_source.data.update(x=y_range, y=lin_fit(y_range, *popt_norm_y))
 
     def target_select_callback(_attr, _old, new):
@@ -221,11 +232,22 @@ def create():
         # load calibration, if present
         x_range = np.array(config.get("calib_x_range", []))
         x_norm = np.array(config.get("calib_x_norm", []))
+        x_norm_std = np.array(config.get("calib_x_norm_std", []))
         y_range = np.array(config.get("calib_y_range", []))
         y_norm = np.array(config.get("calib_y_norm", []))
+        y_norm_std = np.array(config.get("calib_y_norm_std", []))
         calib_datetime = config.get("calib_datetime", "")
         if x_range.size != 0 and x_norm.size != 0 and y_range.size != 0 and y_norm.size != 0:
-            _update_plots(_get_device_name(), calib_datetime, x_range, x_norm, y_range, y_norm)
+            _update_plots(
+                _get_device_name(),
+                calib_datetime,
+                x_range,
+                x_norm,
+                x_norm_std,
+                y_range,
+                y_norm,
+                y_norm_std,
+            )
 
     device_select = Select(title="Device:", options=DEVICES)
     device_select.on_change("value", device_select_callback)
@@ -266,25 +288,34 @@ def create():
         print("-----", calib_datetime)
         doc.add_next_tick_callback(partial(_set_progress, 0))
 
-        scan_I_mean, _, _ = PBPS_I_calibrate(channels, numShots)
-        norm_diodes = np.asarray([1 / tm / 4 for tm in scan_I_mean])
+        scan_I_mean, scan_I_std, _ = PBPS_I_calibrate(channels, numShots)
+        scan_I = unumpy.uarray(scan_I_mean, scan_I_std)
+        norm_diodes = np.asarray([1 / tm / 4 for tm in scan_I])
         doc.add_next_tick_callback(partial(_set_progress, 1))
 
         pv_x_name = _get_device_prefix() + "MOTOR_X1.VAL"
-        scan_x_mean, _, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
+        scan_x_mean, scan_x_std, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
+        scan_x = unumpy.uarray(scan_x_mean, scan_x_std)
         doc.add_next_tick_callback(partial(_set_progress, 2))
 
         pv_y_name = _get_device_prefix() + "MOTOR_Y1.VAL"
-        scan_y_mean, _, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
+        scan_y_mean, scan_y_std, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
+        scan_y = unumpy.uarray(scan_y_mean, scan_y_std)
         doc.add_next_tick_callback(partial(_set_progress, 3))
 
-        scan_x_norm = (
-            scan_x_mean[:, 3] * norm_diodes[0, 3] - scan_x_mean[:, 2] * norm_diodes[0, 2]
-        ) / (scan_x_mean[:, 3] * norm_diodes[0, 3] + scan_x_mean[:, 2] * norm_diodes[0, 2])
+        scan_x_norm = (scan_x[:, 3] * norm_diodes[0, 3] - scan_x[:, 2] * norm_diodes[0, 2]) / (
+            scan_x[:, 3] * norm_diodes[0, 3] + scan_x[:, 2] * norm_diodes[0, 2]
+        )
 
-        scan_y_norm = (
-            scan_y_mean[:, 1] * norm_diodes[0, 1] - scan_y_mean[:, 0] * norm_diodes[0, 0]
-        ) / (scan_y_mean[:, 1] * norm_diodes[0, 1] + scan_y_mean[:, 0] * norm_diodes[0, 0])
+        scan_y_norm = (scan_y[:, 1] * norm_diodes[0, 1] - scan_y[:, 0] * norm_diodes[0, 0]) / (
+            scan_y[:, 1] * norm_diodes[0, 1] + scan_y[:, 0] * norm_diodes[0, 0]
+        )
+
+        scan_x_norm_std = unumpy.std_devs(scan_x_norm)
+        scan_x_norm = unumpy.nominal_values(scan_x_norm)
+        scan_y_norm_std = unumpy.std_devs(scan_y_norm)
+        scan_y_norm = unumpy.nominal_values(scan_y_norm)
+        norm_diodes = unumpy.nominal_values(norm_diodes)
 
         doc.add_next_tick_callback(
             partial(
@@ -293,8 +324,10 @@ def create():
                 calib_datetime,
                 scan_x_range,
                 scan_x_norm,
+                scan_x_norm_std,
                 scan_y_range,
                 scan_y_norm,
+                scan_y_norm_std,
             )
         )
 
@@ -307,8 +340,10 @@ def create():
         config["horiz_calib"] = (scan_x_range[1] - scan_x_range[0]) / np.diff(scan_x_norm).mean()
         config["calib_x_range"] = scan_x_range.tolist()
         config["calib_x_norm"] = scan_x_norm.tolist()
+        config["calib_x_norm_std"] = scan_x_norm_std.tolist()
         config["calib_y_range"] = scan_y_range.tolist()
         config["calib_y_norm"] = scan_y_norm.tolist()
+        config["calib_y_norm_std"] = scan_y_norm_std.tolist()
         config["calib_datetime"] = calib_datetime
 
         doc.add_next_tick_callback(_unlock_gui)

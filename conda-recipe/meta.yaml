@@ -22,6 +22,7 @@ requirements:
     - bsread
     - pyepics
     - cam_server_client
+    - uncertainties
 
 about:
   home: https://github.com/paulscherrerinstitute/photodiag_web
