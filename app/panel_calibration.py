@@ -180,19 +180,25 @@ def create():
         horiz_fig.title.text = title
         vert_fig.title.text = title
 
-        popt_norm_x = fit(x_range, x_norm)
-        popt_norm_y = fit(y_range, y_norm)
-
-        # Update plots
+        # Update data
         x_upper = x_norm + x_norm_std if x_norm_std.size > 0 else x_norm
         x_lower = x_norm - x_norm_std if x_norm_std.size > 0 else x_norm
         horiz_scatter_source.data.update(x=x_range, y=x_norm, upper=x_upper, lower=x_lower)
-        horiz_line_source.data.update(x=x_range, y=lin_fit(x_range, *popt_norm_x))
 
         y_upper = y_norm + y_norm_std if y_norm_std.size > 0 else y_norm
         y_lower = y_norm - y_norm_std if y_norm_std.size > 0 else y_norm
         vert_scatter_source.data.update(x=y_range, y=y_norm, upper=y_upper, lower=y_lower)
-        vert_line_source.data.update(x=y_range, y=lin_fit(y_range, *popt_norm_y))
+
+        # Update fits
+        if x_range.size and x_norm.size:
+            horiz_line_source.data.update(x=x_range, y=lin_fit(x_range, *fit(x_range, x_norm)))
+        else:
+            horiz_line_source.data.update(x=[], y=[])
+
+        if y_range.size and y_norm.size:
+            vert_line_source.data.update(x=y_range, y=lin_fit(y_range, *fit(y_range, y_norm)))
+        else:
+            vert_line_source.data.update(x=[], y=[])
 
     def target_select_callback(_attr, _old, new):
         targets = list(targets_pv.enum_strs)
@@ -237,17 +243,16 @@ def create():
         y_norm = np.array(config.get("calib_y_norm", []))
         y_norm_std = np.array(config.get("calib_y_norm_std", []))
         calib_datetime = config.get("calib_datetime", "")
-        if x_range.size != 0 and x_norm.size != 0 and y_range.size != 0 and y_norm.size != 0:
-            _update_plots(
-                _get_device_name(),
-                calib_datetime,
-                x_range,
-                x_norm,
-                x_norm_std,
-                y_range,
-                y_norm,
-                y_norm_std,
-            )
+        _update_plots(
+            _get_device_name(),
+            calib_datetime,
+            x_range,
+            x_norm,
+            x_norm_std,
+            y_range,
+            y_norm,
+            y_norm_std,
+        )
 
     device_select = Select(title="Device:", options=DEVICES)
     device_select.on_change("value", device_select_callback)
