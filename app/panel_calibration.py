@@ -465,6 +465,7 @@ def create():
                     "Entry": "Configuration",
                     "Domain": "ARAMIS",
                     "System": "Diagnostics",
+                    "Title": _get_device_name(),
                 },
                 attachments=[horiz_png_path, vert_png_path],
                 suppress_email_notification=True,
