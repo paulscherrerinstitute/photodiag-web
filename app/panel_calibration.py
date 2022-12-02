@@ -444,8 +444,22 @@ def create():
             export_png(horiz_fig, filename=horiz_png_path)
             export_png(vert_fig, filename=vert_png_path)
 
+            message = "\n".join(
+                [
+                    f"{key} = {config[key]}"
+                    for key in (
+                        "up_calib",
+                        "down_calib",
+                        "left_calib",
+                        "right_calib",
+                        "horiz_calib",
+                        "vert_calib",
+                    )
+                ]
+            )
+
             msg_id = logbook.post(
-                "Calibration",
+                message,
                 attributes={
                     "Author": "sf-photodiag",
                     "Entry": "Configuration",
