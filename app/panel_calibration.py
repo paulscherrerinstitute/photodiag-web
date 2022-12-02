@@ -446,7 +446,12 @@ def create():
 
             msg_id = logbook.post(
                 "Calibration",
-                attributes={"Author": "sf-photodiag"},
+                attributes={
+                    "Author": "sf-photodiag",
+                    "Entry": "Configuration",
+                    "Domain": "ARAMIS",
+                    "System": "Diagnostics",
+                },
                 attachments=[horiz_png_path, vert_png_path],
                 suppress_email_notification=True,
             )
