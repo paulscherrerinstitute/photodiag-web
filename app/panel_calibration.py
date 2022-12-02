@@ -1,10 +1,15 @@
+import os
+import tempfile
 import time
 from datetime import datetime
 from functools import partial
 from threading import Thread
 
+import elog
 import epics
 import numpy as np
+import urllib3
+from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel, Whisker
 from bokeh.plotting import curdoc, figure
@@ -13,6 +18,8 @@ from scipy.optimize import curve_fit
 from uncertainties import unumpy
 
 from photodiag_web import DEVICES
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)  # suppress elog warning
 
 scan_x_range = np.linspace(-0.3, 0.3, 3)
 scan_y_range = np.linspace(-0.3, 0.3, 3)
@@ -427,7 +434,27 @@ def create():
     push_results_button = Button(label="Push results")
     push_results_button.on_click(push_results_button_callback)
 
-    push_elog_button = Button(label="Push elog", disabled=True)
+    def push_elog_button_callback():
+        logbook = elog.open(
+            "https://elog-gfa.psi.ch/SF-Photonics-Data", user="sf-photodiag", password=""
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            horiz_png_path = os.path.join(temp_dir, "horiz.png")
+            vert_png_path = os.path.join(temp_dir, "vert.png")
+            export_png(horiz_fig, filename=horiz_png_path)
+            export_png(vert_fig, filename=vert_png_path)
+
+            msg_id = logbook.post(
+                "Calibration",
+                attributes={"Author": "sf-photodiag"},
+                attachments=[horiz_png_path, vert_png_path],
+                suppress_email_notification=True,
+            )
+
+        print(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
+
+    push_elog_button = Button(label="Push elog")
+    push_elog_button.on_click(push_elog_button_callback)
 
     # Trigger the initial device selection
     device_select.value = DEVICES[0]

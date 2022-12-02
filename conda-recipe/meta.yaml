@@ -23,6 +23,10 @@ requirements:
     - pyepics
     - cam_server_client
     - uncertainties
+    - elog
+    - selenium
+    - geckodriver
+    - firefox =96
 
 about:
   home: https://github.com/paulscherrerinstitute/photodiag_web
