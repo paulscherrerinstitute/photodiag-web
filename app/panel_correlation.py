@@ -17,8 +17,6 @@ def create():
 
     # xcorr figure
     xcorr_plot = figure(
-        x_axis_label="XPOS",
-        y_axis_label="XPOS2",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -42,8 +40,6 @@ def create():
 
     # ycorr figure
     ycorr_plot = figure(
-        x_axis_label="YPOS",
-        y_axis_label="YPOS2",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -67,8 +63,6 @@ def create():
 
     # icorr figure
     icorr_plot = figure(
-        x_axis_label="INT",
-        y_axis_label="INT2",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -151,6 +145,22 @@ def create():
             thread.start()
 
             update_plots_periodic_callback = curdoc().add_periodic_callback(update_plots, 1000)
+
+            device_name = device_select.value
+            device2_name = device2_select.value
+            intensity = device_name + ":INTENSITY"
+            intensity2 = device2_name + ":INTENSITY"
+            xpos = device_name + ":XPOS"
+            xpos2 = device2_name + ":XPOS"
+            ypos = device_name + ":YPOS"
+            ypos2 = device2_name + ":YPOS"
+
+            xcorr_plot.xaxis.axis_label = xpos
+            xcorr_plot.yaxis.axis_label = xpos2
+            ycorr_plot.xaxis.axis_label = ypos
+            ycorr_plot.yaxis.axis_label = ypos2
+            icorr_plot.xaxis.axis_label = intensity
+            icorr_plot.yaxis.axis_label = intensity2
 
             device_select.disabled = True
             device2_select.disabled = True

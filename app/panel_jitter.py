@@ -13,8 +13,6 @@ from photodiag_web import DEVICES
 def create():
     # xy figure
     xy_fig = figure(
-        x_axis_label="XPOS",
-        y_axis_label="YPOS",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -38,8 +36,6 @@ def create():
 
     # ix figure
     ix_fig = figure(
-        x_axis_label="INT",
-        y_axis_label="XPOS",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -60,8 +56,6 @@ def create():
 
     # iy figure
     iy_fig = figure(
-        x_axis_label="INT",
-        y_axis_label="YPOS",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -122,6 +116,18 @@ def create():
             thread.start()
 
             update_plots_periodic_callback = curdoc().add_periodic_callback(update_plots, 1000)
+
+            device_name = device_select.value
+            xpos = device_name + ":XPOS"
+            ypos = device_name + ":YPOS"
+            intensity = device_name + ":INTENSITY"
+
+            xy_fig.xaxis.axis_label = xpos
+            xy_fig.yaxis.axis_label = ypos
+            ix_fig.xaxis.axis_label = intensity
+            ix_fig.yaxis.axis_label = xpos
+            iy_fig.xaxis.axis_label = intensity
+            iy_fig.yaxis.axis_label = ypos
 
             device_select.disabled = True
             num_shots_spinner.disabled = True

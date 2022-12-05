@@ -141,7 +141,6 @@ def create():
     # horiz figure
     horiz_fig = figure(
         title=" ",
-        x_axis_label="MOTOR_X1.VAL",
         y_axis_label=r"$$I_r-I_l/I_r+I_l$$",
         height=300,
         width=500,
@@ -163,7 +162,6 @@ def create():
     # vert_plot
     vert_fig = figure(
         title=" ",
-        x_axis_label="MOTOR_Y1.VAL",
         y_axis_label=r"$$I_u-I_d/I_u+I_d$$",
         height=300,
         width=500,
@@ -180,12 +178,14 @@ def create():
     vert_fig.toolbar.logo = None
     vert_fig.plot.legend.click_policy = "hide"
 
-    def _update_plots(
-        device, calib_datetime, x_range, x_norm, x_norm_std, y_range, y_norm, y_norm_std
-    ):
-        title = f"{device}, {calib_datetime}"
+    def _update_plots(calib_datetime, x_range, x_norm, x_norm_std, y_range, y_norm, y_norm_std):
+        device_name = _get_device_name()
+        title = f"{device_name}, {calib_datetime}"
         horiz_fig.title.text = title
         vert_fig.title.text = title
+
+        horiz_fig.xaxis.axis_label = f"{device_name}:MOTOR_X1.VAL"
+        vert_fig.xaxis.axis_label = f"{device_name}:MOTOR_Y1.VAL"
 
         # Update data
         x_upper = x_norm + x_norm_std if x_norm_std.size > 0 else x_norm
@@ -251,7 +251,6 @@ def create():
         y_norm_std = np.array(config.get("calib_y_norm_std", []))
         calib_datetime = config.get("calib_datetime", "")
         _update_plots(
-            _get_device_name(),
             calib_datetime,
             x_range,
             x_norm,
@@ -332,7 +331,6 @@ def create():
         doc.add_next_tick_callback(
             partial(
                 _update_plots,
-                _get_device_name(),
                 calib_datetime,
                 scan_x_range,
                 scan_x_norm,
