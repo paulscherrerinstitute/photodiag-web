@@ -7,10 +7,12 @@ import panel_correlation  # pylint: disable=import-error
 import panel_jitter  # pylint: disable=import-error
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
-from bokeh.models import Tabs, TextAreaInput
+from bokeh.models import Div, Tabs, TextAreaInput
 
 doc = curdoc()
 doc.title = "photodiag-web"
+
+title_img = Div(text="""<img src="/app/static/aramis.png" width=1000>""")
 
 sys.stdout = StringIO()
 stdout_textareainput = TextAreaInput(title="print output:", height=150, width=750)
@@ -26,6 +28,7 @@ bokeh_log_textareainput = TextAreaInput(title="server output:", height=150, widt
 # Final layout
 doc.add_root(
     column(
+        title_img,
         Tabs(tabs=[panel_calibration.create(), panel_correlation.create(), panel_jitter.create()]),
         row(stdout_textareainput, bokeh_log_textareainput),
     )
