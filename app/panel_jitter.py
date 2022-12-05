@@ -40,7 +40,6 @@ def create():
     ix_fig = figure(
         x_axis_label="INT",
         y_axis_label="XPOS",
-        y_range=xy_fig.x_range,
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -63,8 +62,6 @@ def create():
     iy_fig = figure(
         x_axis_label="INT",
         y_axis_label="YPOS",
-        x_range=ix_fig.x_range,
-        y_range=xy_fig.y_range,
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
