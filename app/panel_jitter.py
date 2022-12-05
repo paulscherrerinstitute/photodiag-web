@@ -1,4 +1,5 @@
 from collections import deque
+from datetime import datetime
 from threading import Thread
 
 import bsread
@@ -11,8 +12,11 @@ from photodiag_web import DEVICES
 
 
 def create():
+    doc = curdoc()
+
     # xy figure
     xy_fig = figure(
+        title=" ",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -36,6 +40,7 @@ def create():
 
     # ix figure
     ix_fig = figure(
+        title=" ",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -56,6 +61,7 @@ def create():
 
     # iy figure
     iy_fig = figure(
+        title=" ",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -96,6 +102,13 @@ def create():
         if not buffer:
             return
 
+        device_name = device_select.value
+        datetime_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        title = f"{device_name}, {datetime_now}"
+        xy_fig.title.text = title
+        ix_fig.title.text = title
+        iy_fig.title.text = title
+
         data_array = np.array(buffer)
         is_even = data_array[:, 0] == 0
         data_even = data_array[is_even, :]
@@ -115,7 +128,7 @@ def create():
             thread = Thread(target=collect_data)
             thread.start()
 
-            update_plots_periodic_callback = curdoc().add_periodic_callback(update_plots, 1000)
+            update_plots_periodic_callback = doc.add_periodic_callback(update_plots, 1000)
 
             device_name = device_select.value
             xpos = device_name + ":XPOS"
@@ -135,7 +148,7 @@ def create():
             update_toggle.label = "Stop"
             update_toggle.button_type = "success"
         else:
-            curdoc().remove_periodic_callback(update_plots_periodic_callback)
+            doc.remove_periodic_callback(update_plots_periodic_callback)
 
             device_select.disabled = False
             num_shots_spinner.disabled = False

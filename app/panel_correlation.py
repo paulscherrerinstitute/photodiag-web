@@ -1,4 +1,5 @@
 from collections import deque
+from datetime import datetime
 from threading import Thread
 
 import bsread
@@ -11,12 +12,15 @@ from photodiag_web import DEVICES
 
 
 def create():
+    doc = curdoc()
+
     device_select = Select(title="Device:", value=DEVICES[0], options=DEVICES)
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
     device2_select = Select(title="Device #2:", value=DEVICES[1], options=DEVICES)
 
     # xcorr figure
     xcorr_plot = figure(
+        title=" ",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -40,6 +44,7 @@ def create():
 
     # ycorr figure
     ycorr_plot = figure(
+        title=" ",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -63,6 +68,7 @@ def create():
 
     # icorr figure
     icorr_plot = figure(
+        title=" ",
         height=300,
         width=500,
         tools="pan,wheel_zoom,save,reset",
@@ -120,6 +126,14 @@ def create():
         if not buffer:
             return
 
+        device_name = device_select.value
+        device2_name = device2_select.value
+        datetime_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        title = f"{device2_name} vs {device_name}, {datetime_now}"
+        xcorr_plot.title.text = title
+        ycorr_plot.title.text = title
+        icorr_plot.title.text = title
+
         data_array = np.array(buffer)
         is_even = data_array[:, 0] == 0
         data_even = data_array[is_even, :]
@@ -144,7 +158,7 @@ def create():
             thread = Thread(target=collect_data)
             thread.start()
 
-            update_plots_periodic_callback = curdoc().add_periodic_callback(update_plots, 1000)
+            update_plots_periodic_callback = doc.add_periodic_callback(update_plots, 1000)
 
             device_name = device_select.value
             device2_name = device2_select.value
@@ -169,7 +183,7 @@ def create():
             update_toggle.label = "Stop"
             update_toggle.button_type = "success"
         else:
-            curdoc().remove_periodic_callback(update_plots_periodic_callback)
+            doc.remove_periodic_callback(update_plots_periodic_callback)
 
             device_select.disabled = False
             device2_select.disabled = False
