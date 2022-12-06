@@ -267,6 +267,7 @@ def create():
         target_select.disabled = True
         calibrate_button.disabled = True
         push_results_button.disabled = True
+        push_elog_button.disabled = True
 
     async def _unlock_gui():
         device_select.disabled = False
@@ -274,6 +275,7 @@ def create():
         target_select.disabled = False
         calibrate_button.disabled = False
         push_results_button.disabled = False
+        push_elog_button.disabled = False
 
     async def _set_progress(step):
         if step != 3:
