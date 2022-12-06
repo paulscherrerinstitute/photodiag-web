@@ -102,16 +102,12 @@ def pv_scan(pv_name, scan_range, channels, numShots):
 
 
 def PBPS_I_calibrate(channels, numShots):
-    scan_mean = []
-    scan_std = []
-    scan_all = []
-
     data = PBPS_get_data(channels, numShots)
-    scan_mean.append([i.mean() for i in data])
-    scan_std.append([i.std() for i in data])
-    scan_all.append(data)
+    scan_mean = np.array([i.mean() for i in data])
+    scan_std = np.array([i.std() for i in data])
+    scan_all = np.array(data)
 
-    return np.asarray(scan_mean), np.asarray(scan_std), np.asarray(scan_all)
+    return scan_mean, scan_std, scan_all
 
 
 def lin_fit(x, m, a):
@@ -301,7 +297,7 @@ def create():
 
         I_mean, I_std, _ = PBPS_I_calibrate(channels, numShots)
         u_I = unumpy.uarray(I_mean, I_std)
-        u_norm_diodes = np.asarray([1 / val / 4 for val in u_I])
+        u_I_norm = 1 / u_I / 4
         doc.add_next_tick_callback(partial(_set_progress, 1))
 
         pv_x_name = _get_device_prefix() + "MOTOR_X1.VAL"
@@ -314,19 +310,19 @@ def create():
         u_y = unumpy.uarray(y_mean, y_std)
         doc.add_next_tick_callback(partial(_set_progress, 3))
 
-        u_x_norm = (u_x[:, 3] * u_norm_diodes[0, 3] - u_x[:, 2] * u_norm_diodes[0, 2]) / (
-            u_x[:, 3] * u_norm_diodes[0, 3] + u_x[:, 2] * u_norm_diodes[0, 2]
+        u_x_norm = (u_x[:, 3] * u_I_norm[3] - u_x[:, 2] * u_I_norm[2]) / (
+            u_x[:, 3] * u_I_norm[3] + u_x[:, 2] * u_I_norm[2]
         )
 
-        u_y_norm = (u_y[:, 1] * u_norm_diodes[0, 1] - u_y[:, 0] * u_norm_diodes[0, 0]) / (
-            u_y[:, 1] * u_norm_diodes[0, 1] + u_y[:, 0] * u_norm_diodes[0, 0]
+        u_y_norm = (u_y[:, 1] * u_I_norm[1] - u_y[:, 0] * u_I_norm[0]) / (
+            u_y[:, 1] * u_I_norm[1] + u_y[:, 0] * u_I_norm[0]
         )
 
         x_norm_std = unumpy.std_devs(u_x_norm)
         x_norm = unumpy.nominal_values(u_x_norm)
         y_norm_std = unumpy.std_devs(u_y_norm)
         y_norm = unumpy.nominal_values(u_y_norm)
-        norm_diodes = unumpy.nominal_values(u_norm_diodes)
+        I_norm = unumpy.nominal_values(u_I_norm)
 
         doc.add_next_tick_callback(
             partial(
@@ -342,10 +338,10 @@ def create():
         )
 
         # Update config
-        config["down_calib"] = norm_diodes[0, 0]
-        config["up_calib"] = norm_diodes[0, 1]
-        config["right_calib"] = norm_diodes[0, 2]
-        config["left_calib"] = norm_diodes[0, 3]
+        config["down_calib"] = I_norm[0]
+        config["up_calib"] = I_norm[1]
+        config["right_calib"] = I_norm[2]
+        config["left_calib"] = I_norm[3]
         config["vert_calib"] = (scan_y_range[1] - scan_y_range[0]) / np.diff(y_norm).mean()
         config["horiz_calib"] = (scan_x_range[1] - scan_x_range[0]) / np.diff(x_norm).mean()
         config["calib_x_range"] = scan_x_range.tolist()
