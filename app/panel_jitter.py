@@ -87,9 +87,9 @@ def create():
         buffer = deque(maxlen=num_shots_spinner.value)
 
         device_name = device_select.value
-        xpos = device_name + ":XPOS"
-        ypos = device_name + ":YPOS"
-        intensity = device_name + ":INTENSITY"
+        xpos = f"{device_name}:XPOS"
+        ypos = f"{device_name}:YPOS"
+        intensity = f"{device_name}:INTENSITY"
 
         with bsread.source(channels=[xpos, ypos, intensity]) as stream:
             while update_toggle.active:
@@ -131,9 +131,9 @@ def create():
             update_plots_periodic_callback = doc.add_periodic_callback(update_plots, 1000)
 
             device_name = device_select.value
-            xpos = device_name + ":XPOS"
-            ypos = device_name + ":YPOS"
-            intensity = device_name + ":INTENSITY"
+            xpos = f"{device_name}:XPOS"
+            ypos = f"{device_name}:YPOS"
+            intensity = f"{device_name}:INTENSITY"
 
             xy_fig.xaxis.axis_label = xpos
             xy_fig.yaxis.axis_label = ypos

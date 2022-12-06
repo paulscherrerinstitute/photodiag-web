@@ -19,7 +19,7 @@ def create():
     device2_select = Select(title="Device #2:", value=DEVICES[1], options=DEVICES)
 
     # xcorr figure
-    xcorr_plot = figure(
+    xcorr_fig = figure(
         title=" ",
         height=300,
         width=500,
@@ -27,10 +27,10 @@ def create():
     )
 
     xcorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    xcorr_plot.circle(x="x", y="y", source=xcorr_even_scatter_source, legend_label="even")
+    xcorr_fig.circle(x="x", y="y", source=xcorr_even_scatter_source, legend_label="even")
 
     xcorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    xcorr_plot.circle(
+    xcorr_fig.circle(
         x="x",
         y="y",
         source=xcorr_odd_scatter_source,
@@ -39,11 +39,11 @@ def create():
         legend_label="odd",
     )
 
-    xcorr_plot.toolbar.logo = None
-    xcorr_plot.plot.legend.click_policy = "hide"
+    xcorr_fig.toolbar.logo = None
+    xcorr_fig.plot.legend.click_policy = "hide"
 
     # ycorr figure
-    ycorr_plot = figure(
+    ycorr_fig = figure(
         title=" ",
         height=300,
         width=500,
@@ -51,10 +51,10 @@ def create():
     )
 
     ycorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    ycorr_plot.circle(x="x", y="y", source=ycorr_even_scatter_source, legend_label="even")
+    ycorr_fig.circle(x="x", y="y", source=ycorr_even_scatter_source, legend_label="even")
 
     ycorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    ycorr_plot.circle(
+    ycorr_fig.circle(
         x="x",
         y="y",
         source=ycorr_odd_scatter_source,
@@ -63,11 +63,11 @@ def create():
         legend_label="odd",
     )
 
-    ycorr_plot.toolbar.logo = None
-    ycorr_plot.plot.legend.click_policy = "hide"
+    ycorr_fig.toolbar.logo = None
+    ycorr_fig.plot.legend.click_policy = "hide"
 
     # icorr figure
-    icorr_plot = figure(
+    icorr_fig = figure(
         title=" ",
         height=300,
         width=500,
@@ -75,10 +75,10 @@ def create():
     )
 
     icorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    icorr_plot.circle(x="x", y="y", source=icorr_even_scatter_source, legend_label="even")
+    icorr_fig.circle(x="x", y="y", source=icorr_even_scatter_source, legend_label="even")
 
     icorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    icorr_plot.circle(
+    icorr_fig.circle(
         x="x",
         y="y",
         source=icorr_odd_scatter_source,
@@ -87,8 +87,8 @@ def create():
         legend_label="odd",
     )
 
-    icorr_plot.toolbar.logo = None
-    icorr_plot.plot.legend.click_policy = "hide"
+    icorr_fig.toolbar.logo = None
+    icorr_fig.plot.legend.click_policy = "hide"
 
     buffer = None
 
@@ -98,12 +98,12 @@ def create():
 
         device_name = device_select.value
         device2_name = device2_select.value
-        intensity = device_name + ":INTENSITY"
-        intensity2 = device2_name + ":INTENSITY"
-        xpos = device_name + ":XPOS"
-        xpos2 = device2_name + ":XPOS"
-        ypos = device_name + ":YPOS"
-        ypos2 = device2_name + ":YPOS"
+        xpos = f"{device_name}:XPOS"
+        xpos2 = f"{device2_name}:XPOS"
+        ypos = f"{device_name}:YPOS"
+        ypos2 = f"{device2_name}:YPOS"
+        intensity = f"{device_name}:INTENSITY"
+        intensity2 = f"{device2_name}:INTENSITY"
 
         with bsread.source(channels=[intensity, xpos, ypos, intensity2, xpos2, ypos2]) as stream:
             while update_toggle.active:
@@ -130,9 +130,9 @@ def create():
         device2_name = device2_select.value
         datetime_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         title = f"{device2_name} vs {device_name}, {datetime_now}"
-        xcorr_plot.title.text = title
-        ycorr_plot.title.text = title
-        icorr_plot.title.text = title
+        xcorr_fig.title.text = title
+        ycorr_fig.title.text = title
+        icorr_fig.title.text = title
 
         data_array = np.array(buffer)
         is_even = data_array[:, 0] == 0
@@ -162,19 +162,19 @@ def create():
 
             device_name = device_select.value
             device2_name = device2_select.value
-            intensity = device_name + ":INTENSITY"
-            intensity2 = device2_name + ":INTENSITY"
-            xpos = device_name + ":XPOS"
-            xpos2 = device2_name + ":XPOS"
-            ypos = device_name + ":YPOS"
-            ypos2 = device2_name + ":YPOS"
+            xpos = f"{device_name}:XPOS"
+            xpos2 = f"{device2_name}:XPOS"
+            ypos = f"{device_name}:YPOS"
+            ypos2 = f"{device2_name}:YPOS"
+            intensity = f"{device_name}:INTENSITY"
+            intensity2 = f"{device2_name}:INTENSITY"
 
-            xcorr_plot.xaxis.axis_label = xpos
-            xcorr_plot.yaxis.axis_label = xpos2
-            ycorr_plot.xaxis.axis_label = ypos
-            ycorr_plot.yaxis.axis_label = ypos2
-            icorr_plot.xaxis.axis_label = intensity
-            icorr_plot.yaxis.axis_label = intensity2
+            xcorr_fig.xaxis.axis_label = xpos
+            xcorr_fig.yaxis.axis_label = xpos2
+            ycorr_fig.xaxis.axis_label = ypos
+            ycorr_fig.yaxis.axis_label = ypos2
+            icorr_fig.xaxis.axis_label = intensity
+            icorr_fig.yaxis.axis_label = intensity2
 
             device_select.disabled = True
             device2_select.disabled = True
@@ -198,7 +198,7 @@ def create():
     push_elog_button = Button(label="Push elog", disabled=True)
 
     tab_layout = column(
-        row(xcorr_plot, ycorr_plot, icorr_plot),
+        row(xcorr_fig, ycorr_fig, icorr_fig),
         row(
             device_select,
             device2_select,

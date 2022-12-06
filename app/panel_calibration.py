@@ -50,7 +50,7 @@ def PBPS_get_data(channels, n_pulses=100, wait_time=0.5):
 
     arrays = make_arrays(pvs, n_pulses)
 
-    def on_value_change(pv=None, ichannel=None, value=None, **kwargs):
+    def on_value_change(pv=None, ichannel=None, value=None, **_):
         ivalue = counters[ichannel]
         arrays[ichannel][ivalue] = value
 
@@ -299,45 +299,45 @@ def create():
         print("-----", calib_datetime)
         doc.add_next_tick_callback(partial(_set_progress, 0))
 
-        scan_I_mean, scan_I_std, _ = PBPS_I_calibrate(channels, numShots)
-        scan_I = unumpy.uarray(scan_I_mean, scan_I_std)
-        norm_diodes = np.asarray([1 / tm / 4 for tm in scan_I])
+        I_mean, I_std, _ = PBPS_I_calibrate(channels, numShots)
+        u_I = unumpy.uarray(I_mean, I_std)
+        u_norm_diodes = np.asarray([1 / val / 4 for val in u_I])
         doc.add_next_tick_callback(partial(_set_progress, 1))
 
         pv_x_name = _get_device_prefix() + "MOTOR_X1.VAL"
-        scan_x_mean, scan_x_std, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
-        scan_x = unumpy.uarray(scan_x_mean, scan_x_std)
+        x_mean, x_std, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
+        u_x = unumpy.uarray(x_mean, x_std)
         doc.add_next_tick_callback(partial(_set_progress, 2))
 
         pv_y_name = _get_device_prefix() + "MOTOR_Y1.VAL"
-        scan_y_mean, scan_y_std, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
-        scan_y = unumpy.uarray(scan_y_mean, scan_y_std)
+        y_mean, y_std, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
+        u_y = unumpy.uarray(y_mean, y_std)
         doc.add_next_tick_callback(partial(_set_progress, 3))
 
-        scan_x_norm = (scan_x[:, 3] * norm_diodes[0, 3] - scan_x[:, 2] * norm_diodes[0, 2]) / (
-            scan_x[:, 3] * norm_diodes[0, 3] + scan_x[:, 2] * norm_diodes[0, 2]
+        u_x_norm = (u_x[:, 3] * u_norm_diodes[0, 3] - u_x[:, 2] * u_norm_diodes[0, 2]) / (
+            u_x[:, 3] * u_norm_diodes[0, 3] + u_x[:, 2] * u_norm_diodes[0, 2]
         )
 
-        scan_y_norm = (scan_y[:, 1] * norm_diodes[0, 1] - scan_y[:, 0] * norm_diodes[0, 0]) / (
-            scan_y[:, 1] * norm_diodes[0, 1] + scan_y[:, 0] * norm_diodes[0, 0]
+        u_y_norm = (u_y[:, 1] * u_norm_diodes[0, 1] - u_y[:, 0] * u_norm_diodes[0, 0]) / (
+            u_y[:, 1] * u_norm_diodes[0, 1] + u_y[:, 0] * u_norm_diodes[0, 0]
         )
 
-        scan_x_norm_std = unumpy.std_devs(scan_x_norm)
-        scan_x_norm = unumpy.nominal_values(scan_x_norm)
-        scan_y_norm_std = unumpy.std_devs(scan_y_norm)
-        scan_y_norm = unumpy.nominal_values(scan_y_norm)
-        norm_diodes = unumpy.nominal_values(norm_diodes)
+        x_norm_std = unumpy.std_devs(u_x_norm)
+        x_norm = unumpy.nominal_values(u_x_norm)
+        y_norm_std = unumpy.std_devs(u_y_norm)
+        y_norm = unumpy.nominal_values(u_y_norm)
+        norm_diodes = unumpy.nominal_values(u_norm_diodes)
 
         doc.add_next_tick_callback(
             partial(
                 _update_plots,
                 calib_datetime,
                 scan_x_range,
-                scan_x_norm,
-                scan_x_norm_std,
+                x_norm,
+                x_norm_std,
                 scan_y_range,
-                scan_y_norm,
-                scan_y_norm_std,
+                y_norm,
+                y_norm_std,
             )
         )
 
@@ -346,14 +346,14 @@ def create():
         config["up_calib"] = norm_diodes[0, 1]
         config["right_calib"] = norm_diodes[0, 2]
         config["left_calib"] = norm_diodes[0, 3]
-        config["vert_calib"] = (scan_y_range[1] - scan_y_range[0]) / np.diff(scan_y_norm).mean()
-        config["horiz_calib"] = (scan_x_range[1] - scan_x_range[0]) / np.diff(scan_x_norm).mean()
+        config["vert_calib"] = (scan_y_range[1] - scan_y_range[0]) / np.diff(y_norm).mean()
+        config["horiz_calib"] = (scan_x_range[1] - scan_x_range[0]) / np.diff(x_norm).mean()
         config["calib_x_range"] = scan_x_range.tolist()
-        config["calib_x_norm"] = scan_x_norm.tolist()
-        config["calib_x_norm_std"] = scan_x_norm_std.tolist()
+        config["calib_x_norm"] = x_norm.tolist()
+        config["calib_x_norm_std"] = x_norm_std.tolist()
         config["calib_y_range"] = scan_y_range.tolist()
-        config["calib_y_norm"] = scan_y_norm.tolist()
-        config["calib_y_norm_std"] = scan_y_norm_std.tolist()
+        config["calib_y_norm"] = y_norm.tolist()
+        config["calib_y_norm_std"] = y_norm_std.tolist()
         config["calib_datetime"] = calib_datetime
 
         doc.add_next_tick_callback(_unlock_gui)
@@ -424,7 +424,6 @@ def create():
 
         # Push position calibration to pipeline
         pipeline_name = config["name"]
-        config["queue_length"] = 5000
         client.save_pipeline_config(pipeline_name, config)
         client.stop_instance(pipeline_name)
         print("camera_server config updated")
