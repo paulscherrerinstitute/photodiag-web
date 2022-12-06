@@ -1,14 +1,21 @@
+import os
+import tempfile
 from collections import deque
 from datetime import datetime
 from threading import Thread
 
 import bsread
+import elog
 import numpy as np
+import urllib3
+from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel, Toggle
 from bokeh.plotting import curdoc, figure
 
 from photodiag_web import DEVICES
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)  # suppress elog warning
 
 
 def create():
@@ -144,6 +151,7 @@ def create():
 
             device_select.disabled = True
             num_shots_spinner.disabled = True
+            push_elog_button.disabled = True
 
             update_toggle.label = "Stop"
             update_toggle.button_type = "success"
@@ -152,6 +160,7 @@ def create():
 
             device_select.disabled = False
             num_shots_spinner.disabled = False
+            push_elog_button.disabled = False
 
             update_toggle.label = "Update"
             update_toggle.button_type = "primary"
@@ -159,7 +168,35 @@ def create():
     update_toggle = Toggle(label="Update", button_type="primary")
     update_toggle.on_change("active", update_toggle_callback)
 
-    push_elog_button = Button(label="Push elog", disabled=True)
+    def push_elog_button_callback():
+        logbook = elog.open(
+            "https://elog-gfa.psi.ch/SF-Photonics-Data", user="sf-photodiag", password=""
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            xy_png_path = os.path.join(temp_dir, "xy.png")
+            ix_png_path = os.path.join(temp_dir, "ix.png")
+            iy_png_path = os.path.join(temp_dir, "iy.png")
+            export_png(xy_fig, filename=xy_png_path)
+            export_png(ix_fig, filename=ix_png_path)
+            export_png(iy_fig, filename=iy_png_path)
+
+            msg_id = logbook.post(
+                "",
+                attributes={
+                    "Author": "sf-photodiag",
+                    "Entry": "Info",
+                    "Domain": "ARAMIS",
+                    "System": "Diagnostics",
+                    "Title": f"{device_select.value} jitter",
+                },
+                attachments=[xy_png_path, ix_png_path, iy_png_path],
+                suppress_email_notification=True,
+            )
+
+        print(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
+
+    push_elog_button = Button(label="Push elog")
+    push_elog_button.on_click(push_elog_button_callback)
 
     tab_layout = column(
         row(xy_fig, ix_fig, iy_fig),
