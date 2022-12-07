@@ -76,7 +76,15 @@ def get_shape(v):
 
 
 def pv_scan(pv_name, scan_range, channels, numShots):
-    pv = epics.PV(pv_name)
+    high_lim = epics.PV(f"{pv_name}.HLM").get()
+    low_lim = epics.PV(f"{pv_name}.LLM").get()
+    if not all((low_lim <= scan_range) & (scan_range <= high_lim)):
+        scan_range = list(scan_range)
+        raise ValueError(
+            f"Soft-limit violation for {pv_name}, {scan_range=}, {low_lim=}, {high_lim=}"
+        )
+
+    pv = epics.PV(f"{pv_name}.VAL")
 
     scan_mean = []
     scan_std = []
@@ -173,8 +181,8 @@ def create():
         horiz_fig.title.text = title
         vert_fig.title.text = title
 
-        horiz_fig.xaxis.axis_label = f"{device_name}:MOTOR_X1.VAL"
-        vert_fig.xaxis.axis_label = f"{device_name}:MOTOR_Y1.VAL"
+        horiz_fig.xaxis.axis_label = f"{device_name}:MOTOR_X1"
+        vert_fig.xaxis.axis_label = f"{device_name}:MOTOR_Y1"
 
         # Update data
         x_upper = x_norm + x_norm_std if x_norm_std.size > 0 else x_norm
@@ -281,15 +289,29 @@ def create():
         u_I_norm = 1 / u_I / 4
         print("Diode response calibrated")
 
-        pv_x_name = _get_device_prefix() + "MOTOR_X1.VAL"
-        x_mean, x_std, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
-        u_x = unumpy.uarray(x_mean, x_std)
-        print("Horizontal position calibrated")
+        pv_x_name = _get_device_prefix() + "MOTOR_X1"
+        try:
+            x_mean, x_std, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
+        except ValueError as e:
+            print(e)
+            doc.add_next_tick_callback(_unlock_gui)
+            return
+        else:
+            print("Horizontal position calibrated")
 
-        pv_y_name = _get_device_prefix() + "MOTOR_Y1.VAL"
-        y_mean, y_std, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
+        u_x = unumpy.uarray(x_mean, x_std)
+
+        pv_y_name = _get_device_prefix() + "MOTOR_Y1"
+        try:
+            y_mean, y_std, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
+        except ValueError as e:
+            print(e)
+            doc.add_next_tick_callback(_unlock_gui)
+            return
+        else:
+            print("Vertical position calibrated")
+
         u_y = unumpy.uarray(y_mean, y_std)
-        print("Vertical position calibrated")
 
         u_x_norm = (u_x[:, 3] * u_I_norm[3] - u_x[:, 2] * u_I_norm[2]) / (
             u_x[:, 3] * u_I_norm[3] + u_x[:, 2] * u_I_norm[2]
