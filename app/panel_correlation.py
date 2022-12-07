@@ -1,21 +1,14 @@
-import os
-import tempfile
 from collections import deque
 from datetime import datetime
 from threading import Thread
 
 import bsread
-import elog
 import numpy as np
-import urllib3
-from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel, Toggle
 from bokeh.plotting import curdoc, figure
 
-from photodiag_web import DEVICES
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)  # suppress elog warning
+from photodiag_web import DEVICES, push_elog
 
 
 def create():
@@ -205,31 +198,17 @@ def create():
     update_toggle.on_change("active", update_toggle_callback)
 
     def push_elog_button_callback():
-        logbook = elog.open(
-            "https://elog-gfa.psi.ch/SF-Photonics-Data", user="sf-photodiag", password=""
+        push_elog(
+            figures=((xcorr_fig, "xcorr.png"), (ycorr_fig, "ycorr.png"), (icorr_fig, "icorr.png")),
+            message="",
+            attributes={
+                "Author": "sf-photodiag",
+                "Entry": "Info",
+                "Domain": "ARAMIS",
+                "System": "Diagnostics",
+                "Title": f"{device2_select.value} vs {device_select.value} correlation",
+            },
         )
-        with tempfile.TemporaryDirectory() as temp_dir:
-            xcorr_png_path = os.path.join(temp_dir, "xcorr.png")
-            ycorr_png_path = os.path.join(temp_dir, "ycorr.png")
-            icorr_png_path = os.path.join(temp_dir, "icorr.png")
-            export_png(xcorr_fig, filename=xcorr_png_path)
-            export_png(ycorr_fig, filename=ycorr_png_path)
-            export_png(icorr_fig, filename=icorr_png_path)
-
-            msg_id = logbook.post(
-                "",
-                attributes={
-                    "Author": "sf-photodiag",
-                    "Entry": "Info",
-                    "Domain": "ARAMIS",
-                    "System": "Diagnostics",
-                    "Title": f"{device2_select.value} vs {device_select.value} correlation",
-                },
-                attachments=[xcorr_png_path, ycorr_png_path, icorr_png_path],
-                suppress_email_notification=True,
-            )
-
-        print(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
 
     push_elog_button = Button(label="Push elog")
     push_elog_button.on_click(push_elog_button_callback)

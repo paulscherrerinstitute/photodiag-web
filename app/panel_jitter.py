@@ -1,21 +1,14 @@
-import os
-import tempfile
 from collections import deque
 from datetime import datetime
 from threading import Thread
 
 import bsread
-import elog
 import numpy as np
-import urllib3
-from bokeh.io import export_png
 from bokeh.layouts import column, row
 from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel, Toggle
 from bokeh.plotting import curdoc, figure
 
-from photodiag_web import DEVICES
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)  # suppress elog warning
+from photodiag_web import DEVICES, push_elog
 
 
 def create():
@@ -169,31 +162,17 @@ def create():
     update_toggle.on_change("active", update_toggle_callback)
 
     def push_elog_button_callback():
-        logbook = elog.open(
-            "https://elog-gfa.psi.ch/SF-Photonics-Data", user="sf-photodiag", password=""
+        push_elog(
+            figures=((xy_fig, "xy.png"), (ix_fig, "ix.png"), (iy_fig, "iy.png")),
+            message="",
+            attributes={
+                "Author": "sf-photodiag",
+                "Entry": "Info",
+                "Domain": "ARAMIS",
+                "System": "Diagnostics",
+                "Title": f"{device_select.value} jitter",
+            },
         )
-        with tempfile.TemporaryDirectory() as temp_dir:
-            xy_png_path = os.path.join(temp_dir, "xy.png")
-            ix_png_path = os.path.join(temp_dir, "ix.png")
-            iy_png_path = os.path.join(temp_dir, "iy.png")
-            export_png(xy_fig, filename=xy_png_path)
-            export_png(ix_fig, filename=ix_png_path)
-            export_png(iy_fig, filename=iy_png_path)
-
-            msg_id = logbook.post(
-                "",
-                attributes={
-                    "Author": "sf-photodiag",
-                    "Entry": "Info",
-                    "Domain": "ARAMIS",
-                    "System": "Diagnostics",
-                    "Title": f"{device_select.value} jitter",
-                },
-                attachments=[xy_png_path, ix_png_path, iy_png_path],
-                suppress_email_notification=True,
-            )
-
-        print(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
 
     push_elog_button = Button(label="Push elog")
     push_elog_button.on_click(push_elog_button_callback)
