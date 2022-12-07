@@ -270,40 +270,26 @@ def create():
         push_results_button.disabled = False
         push_elog_button.disabled = False
 
-    async def _set_progress(step):
-        if step != 3:
-            calibrate_button.label = f"Step {step}/3"
-        else:
-            calibrate_button.label = "Calibrate"
-
-        if step == 1:
-            print("Diode response calibrated")
-        elif step == 2:
-            print("Horizontal position calibrated")
-        elif step == 3:
-            print("Vertical position calibrated")
-
     def _calibrate():
         numShots = num_shots_spinner.value
         channels = [config["down"], config["up"], config["right"], config["left"]]
         calib_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print("-----", calib_datetime)
-        doc.add_next_tick_callback(partial(_set_progress, 0))
 
         I_mean, I_std, _ = PBPS_I_calibrate(channels, numShots)
         u_I = unumpy.uarray(I_mean, I_std)
         u_I_norm = 1 / u_I / 4
-        doc.add_next_tick_callback(partial(_set_progress, 1))
+        print("Diode response calibrated")
 
         pv_x_name = _get_device_prefix() + "MOTOR_X1.VAL"
         x_mean, x_std, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
         u_x = unumpy.uarray(x_mean, x_std)
-        doc.add_next_tick_callback(partial(_set_progress, 2))
+        print("Horizontal position calibrated")
 
         pv_y_name = _get_device_prefix() + "MOTOR_Y1.VAL"
         y_mean, y_std, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
         u_y = unumpy.uarray(y_mean, y_std)
-        doc.add_next_tick_callback(partial(_set_progress, 3))
+        print("Vertical position calibrated")
 
         u_x_norm = (u_x[:, 3] * u_I_norm[3] - u_x[:, 2] * u_I_norm[2]) / (
             u_x[:, 3] * u_I_norm[3] + u_x[:, 2] * u_I_norm[2]
