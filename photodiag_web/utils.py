@@ -46,4 +46,4 @@ def push_elog(figures, message, attributes):
             suppress_email_notification=True,
         )
 
-    print(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
+    return msg_id

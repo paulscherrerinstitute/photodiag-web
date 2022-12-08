@@ -13,6 +13,7 @@ from photodiag_web import DEVICES, push_elog
 
 def create():
     doc = curdoc()
+    log = doc.logger
 
     device_select = Select(title="Device:", value=DEVICES[0], options=DEVICES)
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
@@ -198,7 +199,7 @@ def create():
     update_toggle.on_change("active", update_toggle_callback)
 
     def push_elog_button_callback():
-        push_elog(
+        msg_id = push_elog(
             figures=((xcorr_fig, "xcorr.png"), (ycorr_fig, "ycorr.png"), (icorr_fig, "icorr.png")),
             message="",
             attributes={
@@ -209,6 +210,7 @@ def create():
                 "Title": f"{device2_select.value} vs {device_select.value} correlation",
             },
         )
+        log.info(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
 
     push_elog_button = Button(label="Push elog")
     push_elog_button.on_click(push_elog_button_callback)

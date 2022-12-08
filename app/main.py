@@ -1,5 +1,4 @@
 import logging
-import sys
 from io import StringIO
 
 import panel_calibration  # pylint: disable=import-error
@@ -14,13 +13,24 @@ doc.title = "photodiag-web"
 
 title_img = Div(text="""<img src="/app/static/aramis.png" width=1000>""")
 
-sys.stdout = StringIO()
-stdout_textareainput = TextAreaInput(title="print output:", height=150, width=750)
+stream = StringIO()
+handler = logging.StreamHandler(stream)
+handler.setFormatter(
+    logging.Formatter(fmt='%(asctime)s %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
+)
+logger = logging.getLogger(str(id(doc)))
+logger.propagate = False
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
+log_textareainput = TextAreaInput(title="print output:", height=150, width=750)
+
+doc.logger = logger
 
 bokeh_stream = StringIO()
 bokeh_handler = logging.StreamHandler(bokeh_stream)
 bokeh_handler.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
 bokeh_logger = logging.getLogger("bokeh")
+bokeh_logger.setLevel(logging.WARNING)
 bokeh_logger.addHandler(bokeh_handler)
 bokeh_log_textareainput = TextAreaInput(title="server output:", height=150, width=750)
 
@@ -30,13 +40,13 @@ doc.add_root(
     column(
         title_img,
         Tabs(tabs=[panel_calibration.create(), panel_correlation.create(), panel_jitter.create()]),
-        row(stdout_textareainput, bokeh_log_textareainput),
+        row(log_textareainput, bokeh_log_textareainput),
     )
 )
 
 
 def update_stdout():
-    stdout_textareainput.value = sys.stdout.getvalue()
+    log_textareainput.value = stream.getvalue()
     bokeh_log_textareainput.value = bokeh_stream.getvalue()
 
 

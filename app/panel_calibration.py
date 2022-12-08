@@ -130,6 +130,7 @@ def _set_epics_PV(name, value):
 
 def create():
     doc = curdoc()
+    log = doc.logger
 
     # horiz figure
     horiz_fig = figure(
@@ -280,22 +281,21 @@ def create():
         numShots = num_shots_spinner.value
         channels = [config["down"], config["up"], config["right"], config["left"]]
         calib_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print("-----", calib_datetime)
 
         I_mean, I_std, _ = PBPS_I_calibrate(channels, numShots)
         u_I = unumpy.uarray(I_mean, I_std)
         u_I_norm = 1 / u_I / 4
-        print("Diode response calibrated")
+        log.info("Diode response calibrated")
 
         pv_x_name = f"{device_name}:MOTOR_X1"
         try:
             x_mean, x_std, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
         except ValueError as e:
-            print(e)
+            log.error(e)
             doc.add_next_tick_callback(_unlock_gui)
             return
         else:
-            print("Horizontal position calibrated")
+            log.info("Horizontal position calibrated")
 
         u_x = unumpy.uarray(x_mean, x_std)
 
@@ -303,11 +303,11 @@ def create():
         try:
             y_mean, y_std, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
         except ValueError as e:
-            print(e)
+            log.error(e)
             doc.add_next_tick_callback(_unlock_gui)
             return
         else:
-            print("Vertical position calibrated")
+            log.info("Vertical position calibrated")
 
         u_y = unumpy.uarray(y_mean, y_std)
 
@@ -417,13 +417,13 @@ def create():
             _set_epics_PV("XPOS.INPJ", f'{device_name}:INTENSITY')
             # Calculation
             _set_epics_PV("XPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
-            print("EPICS PVs updated")
+            log.info("EPICS PVs updated")
 
         # Push position calibration to pipeline
         pipeline_name = config["name"]
         client.save_pipeline_config(pipeline_name, config)
         client.stop_instance(pipeline_name)
-        print("camera_server config updated")
+        log.info("camera_server config updated")
 
     push_results_button = Button(label="Push results")
     push_results_button.on_click(push_results_button_callback)
@@ -441,7 +441,7 @@ def create():
             )
         ]
 
-        push_elog(
+        msg_id = push_elog(
             figures=((horiz_fig, "horiz.png"), (vert_fig, "vert.png")),
             message="\n".join(calib_res),
             attributes={
@@ -452,6 +452,7 @@ def create():
                 "Title": _get_device_name(),
             },
         )
+        log.info(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
 
     push_elog_button = Button(label="Push elog")
     push_elog_button.on_click(push_elog_button_callback)

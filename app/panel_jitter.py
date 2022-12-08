@@ -13,6 +13,7 @@ from photodiag_web import DEVICES, push_elog
 
 def create():
     doc = curdoc()
+    log = doc.logger
 
     # xy figure
     xy_fig = figure(
@@ -162,7 +163,7 @@ def create():
     update_toggle.on_change("active", update_toggle_callback)
 
     def push_elog_button_callback():
-        push_elog(
+        msg_id = push_elog(
             figures=((xy_fig, "xy.png"), (ix_fig, "ix.png"), (iy_fig, "iy.png")),
             message="",
             attributes={
@@ -173,6 +174,7 @@ def create():
                 "Title": f"{device_select.value} jitter",
             },
         )
+        log.info(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
 
     push_elog_button = Button(label="Push elog")
     push_elog_button.on_click(push_elog_button_callback)
