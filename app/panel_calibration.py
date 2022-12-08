@@ -124,12 +124,8 @@ def _get_device_name():
     return config["name"][:-5]  # remove "_proc" suffix
 
 
-def _get_device_prefix():
-    return _get_device_name() + ":"
-
-
 def _set_epics_PV(name, value):
-    epics.PV(_get_device_prefix() + name).put(bytes(str(value), "utf8"))
+    epics.PV(f"{_get_device_name()}:{name}").put(bytes(str(value), "utf8"))
 
 
 def create():
@@ -227,16 +223,17 @@ def create():
     def device_select_callback(_attr, _old, new):
         global config, targets_pv
         config = client.get_instance_config(new + "_proc")
+        device_name = _get_device_name()
 
         # get target options
-        targets_pv = epics.PV(_get_device_prefix() + "PROBE_SP")
+        targets_pv = epics.PV(f"{device_name}:PROBE_SP")
         targets = list(targets_pv.enum_strs)
         target_select.options = targets
         target_select.value = targets[targets_pv.value]
         targets_pv.add_callback(_probe_sp_callback)
 
         # set IN_POS callback control
-        in_pos_pv = epics.PV(_get_device_prefix() + "IN_POS")
+        in_pos_pv = epics.PV(f"{device_name}:IN_POS")
         in_pos_pv.add_callback(_in_pos_callback)
 
         # load calibration, if present
@@ -279,6 +276,7 @@ def create():
         push_elog_button.disabled = False
 
     def _calibrate():
+        device_name = _get_device_name()
         numShots = num_shots_spinner.value
         channels = [config["down"], config["up"], config["right"], config["left"]]
         calib_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -289,7 +287,7 @@ def create():
         u_I_norm = 1 / u_I / 4
         print("Diode response calibrated")
 
-        pv_x_name = _get_device_prefix() + "MOTOR_X1"
+        pv_x_name = f"{device_name}:MOTOR_X1"
         try:
             x_mean, x_std, _ = pv_scan(pv_x_name, scan_x_range, channels, numShots)
         except ValueError as e:
@@ -301,7 +299,7 @@ def create():
 
         u_x = unumpy.uarray(x_mean, x_std)
 
-        pv_y_name = _get_device_prefix() + "MOTOR_Y1"
+        pv_y_name = f"{device_name}:MOTOR_Y1"
         try:
             y_mean, y_std, _ = pv_scan(pv_y_name, scan_y_range, channels, numShots)
         except ValueError as e:
@@ -368,7 +366,7 @@ def create():
 
     def push_results_button_callback():
         if device_select.value not in ("SAROP31-PBPS113", "SAROP31-PBPS149"):
-            dev_pref = _get_device_prefix()
+            device_name = _get_device_name()
             # Intensity
             # Set channels
             # Input data
@@ -398,7 +396,7 @@ def create():
             # Position calibration value
             _set_epics_PV("YPOS.I", config["vert_calib"])
             # Intensity threshold value
-            _set_epics_PV("YPOS.INPJ", dev_pref + "INTENSITY")
+            _set_epics_PV("YPOS.INPJ", f'{device_name}:INTENSITY')
             # Calculation
             _set_epics_PV("YPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
 
@@ -416,7 +414,7 @@ def create():
             # Position calibration value
             _set_epics_PV("XPOS.I", config["horiz_calib"])
             # Intensity threshold value
-            _set_epics_PV("XPOS.INPJ", dev_pref + "INTENSITY")
+            _set_epics_PV("XPOS.INPJ", f'{device_name}:INTENSITY')
             # Calculation
             _set_epics_PV("XPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
             print("EPICS PVs updated")
