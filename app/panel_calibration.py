@@ -173,7 +173,15 @@ def create():
 
     vert_fig.plot.legend.click_policy = "hide"
 
-    def _update_plots(calib_datetime, x_range, x_norm, x_norm_std, y_range, y_norm, y_norm_std):
+    def _update_plots():
+        calib_datetime = config.get("calib_datetime", "")
+        x_range = np.array(config.get("calib_x_range", []))
+        x_norm = np.array(config.get("calib_x_norm", []))
+        x_norm_std = np.array(config.get("calib_x_norm_std", []))
+        y_range = np.array(config.get("calib_y_range", []))
+        y_norm = np.array(config.get("calib_y_norm", []))
+        y_norm_std = np.array(config.get("calib_y_norm_std", []))
+
         device_name = _get_device_name()
         title = f"{device_name}, {calib_datetime}"
         horiz_fig.title.text = title
@@ -238,23 +246,7 @@ def create():
         in_pos_pv = epics.PV(f"{device_name}:IN_POS")
         in_pos_pv.add_callback(_in_pos_callback)
 
-        # load calibration, if present
-        x_range = np.array(config.get("calib_x_range", []))
-        x_norm = np.array(config.get("calib_x_norm", []))
-        x_norm_std = np.array(config.get("calib_x_norm_std", []))
-        y_range = np.array(config.get("calib_y_range", []))
-        y_norm = np.array(config.get("calib_y_norm", []))
-        y_norm_std = np.array(config.get("calib_y_norm_std", []))
-        calib_datetime = config.get("calib_datetime", "")
-        _update_plots(
-            calib_datetime,
-            x_range,
-            x_norm,
-            x_norm_std,
-            y_range,
-            y_norm,
-            y_norm_std,
-        )
+        _update_plots()
 
     device_select = Select(title="Device:", options=DEVICES)
     device_select.on_change("value", device_select_callback)
@@ -326,19 +318,6 @@ def create():
         y_norm = unumpy.nominal_values(u_y_norm)
         I_norm = unumpy.nominal_values(u_I_norm)
 
-        doc.add_next_tick_callback(
-            partial(
-                _update_plots,
-                calib_datetime,
-                scan_x_range,
-                x_norm,
-                x_norm_std,
-                scan_y_range,
-                y_norm,
-                y_norm_std,
-            )
-        )
-
         # Update config
         config["down_calib"] = I_norm[0]
         config["up_calib"] = I_norm[1]
@@ -354,6 +333,7 @@ def create():
         config["calib_y_norm_std"] = y_norm_std.tolist()
         config["calib_datetime"] = calib_datetime
 
+        doc.add_next_tick_callback(_update_plots)
         doc.add_next_tick_callback(_unlock_gui)
 
     def calibrate_button_callback():
