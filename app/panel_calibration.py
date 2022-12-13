@@ -223,7 +223,7 @@ def create():
 
     def device_select_callback(_attr, _old, new):
         global config, targets_pv
-        config = client.get_instance_config(new + "_proc")
+        config = client.get_pipeline_config(new + "_proc")
         device_name = _get_device_name()
 
         # get target options
