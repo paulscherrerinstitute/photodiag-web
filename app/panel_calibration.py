@@ -5,7 +5,7 @@ from threading import Thread
 
 import epics
 import numpy as np
-from bokeh.layouts import column, row
+from bokeh.layouts import column, gridplot, row
 from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel, Whisker
 from bokeh.plotting import curdoc, figure
 from cam_server_client import PipelineClient
@@ -150,7 +150,6 @@ def create():
     horiz_line_source = ColumnDataSource(dict(x=[], y=[]))
     horiz_fig.line(x="x", y="y", source=horiz_line_source, legend_label="fit")
 
-    horiz_fig.toolbar.logo = None
     horiz_fig.plot.legend.click_policy = "hide"
 
     # vert_plot
@@ -169,7 +168,6 @@ def create():
     vert_line_source = ColumnDataSource(dict(x=[], y=[]))
     vert_fig.line(x="x", y="y", source=vert_line_source, legend_label="fit")
 
-    vert_fig.toolbar.logo = None
     vert_fig.plot.legend.click_policy = "hide"
 
     def _update_plots(calib_datetime, x_range, x_norm, x_norm_std, y_range, y_norm, y_norm_std):
@@ -461,7 +459,7 @@ def create():
     device_select.value = DEVICES[0]
 
     tab_layout = column(
-        row(horiz_fig, vert_fig),
+        gridplot([[horiz_fig, vert_fig]], toolbar_options={"logo": None}),
         row(
             device_select,
             num_shots_spinner,

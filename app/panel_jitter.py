@@ -4,7 +4,7 @@ from threading import Thread
 
 import bsread
 import numpy as np
-from bokeh.layouts import column, row
+from bokeh.layouts import column, gridplot, row
 from bokeh.models import Button, ColumnDataSource, Select, Spacer, Spinner, TabPanel, Toggle
 from bokeh.plotting import curdoc, figure
 
@@ -36,7 +36,6 @@ def create():
         legend_label="odd",
     )
 
-    xy_fig.plot.toolbar.logo = None
     xy_fig.plot.legend.click_policy = "hide"
 
     # ix figure
@@ -57,7 +56,6 @@ def create():
         legend_label="odd",
     )
 
-    ix_fig.plot.toolbar.logo = None
     ix_fig.plot.legend.click_policy = "hide"
 
     # iy figure
@@ -78,7 +76,6 @@ def create():
         legend_label="odd",
     )
 
-    iy_fig.plot.toolbar.logo = None
     iy_fig.plot.legend.click_policy = "hide"
 
     buffer = None
@@ -180,7 +177,7 @@ def create():
     push_elog_button.on_click(push_elog_button_callback)
 
     tab_layout = column(
-        row(xy_fig, ix_fig, iy_fig),
+        gridplot([[xy_fig, ix_fig, iy_fig]], toolbar_options={"logo": None}),
         row(
             device_select,
             num_shots_spinner,
