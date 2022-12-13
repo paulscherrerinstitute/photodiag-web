@@ -22,7 +22,7 @@ def create():
     # xcorr figure
     xcorr_fig = figure(
         title=" ",
-        height=300,
+        height=500,
         width=500,
         tools="pan,wheel_zoom,save,reset",
     )
@@ -45,7 +45,7 @@ def create():
     # ycorr figure
     ycorr_fig = figure(
         title=" ",
-        height=300,
+        height=500,
         width=500,
         tools="pan,wheel_zoom,save,reset",
     )
@@ -68,7 +68,7 @@ def create():
     # icorr figure
     icorr_fig = figure(
         title=" ",
-        height=300,
+        height=500,
         width=500,
         tools="pan,wheel_zoom,save,reset",
     )

@@ -18,7 +18,7 @@ def create():
     # xy figure
     xy_fig = figure(
         title=" ",
-        height=300,
+        height=500,
         width=500,
         tools="pan,wheel_zoom,save,reset",
     )
@@ -41,7 +41,7 @@ def create():
     # ix figure
     ix_fig = figure(
         title=" ",
-        height=300,
+        height=500,
         width=500,
         tools="pan,wheel_zoom,save,reset",
     )
@@ -61,7 +61,7 @@ def create():
     # iy figure
     iy_fig = figure(
         title=" ",
-        height=300,
+        height=500,
         width=500,
         tools="pan,wheel_zoom,save,reset",
     )

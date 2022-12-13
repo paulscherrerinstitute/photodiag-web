@@ -136,7 +136,7 @@ def create():
     horiz_fig = figure(
         title=" ",
         y_axis_label=r"$$I_r-I_l/I_r+I_l$$",
-        height=300,
+        height=500,
         width=500,
         tools="pan,wheel_zoom,save,reset",
     )
@@ -156,7 +156,7 @@ def create():
     vert_fig = figure(
         title=" ",
         y_axis_label=r"$$I_u-I_d/I_u+I_d$$",
-        height=300,
+        height=500,
         width=500,
         tools="pan,wheel_zoom,save,reset",
     )
