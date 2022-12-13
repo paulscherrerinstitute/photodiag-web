@@ -23,7 +23,7 @@ requirements:
     - pyepics
     - cam_server_client
     - uncertainties
-    - elog
+    - elog >=1.3.16
     - selenium
     - geckodriver
     - firefox =96
