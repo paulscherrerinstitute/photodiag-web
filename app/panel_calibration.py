@@ -143,8 +143,9 @@ def create():
 
     horiz_scatter_source = ColumnDataSource(dict(x=[], y=[], upper=[], lower=[]))
     horiz_fig.circle(x="x", y="y", source=horiz_scatter_source, legend_label="data")
+    # TODO: fix errorbars
     horiz_fig.add_layout(
-        Whisker(base="x", upper="upper", lower="lower", source=horiz_scatter_source)
+        Whisker(base="x", upper="upper", lower="lower", source=horiz_scatter_source, visible=False)
     )
 
     horiz_line_source = ColumnDataSource(dict(x=[], y=[]))
@@ -163,7 +164,9 @@ def create():
 
     vert_scatter_source = ColumnDataSource(dict(x=[], y=[], upper=[], lower=[]))
     vert_fig.circle(x="x", y="y", source=vert_scatter_source, legend_label="data")
-    vert_fig.add_layout(Whisker(base="x", upper="upper", lower="lower", source=vert_scatter_source))
+    vert_fig.add_layout(
+        Whisker(base="x", upper="upper", lower="lower", source=vert_scatter_source, visible=False)
+    )
 
     vert_line_source = ColumnDataSource(dict(x=[], y=[]))
     vert_fig.line(x="x", y="y", source=vert_line_source, legend_label="fit")
