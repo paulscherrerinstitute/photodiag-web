@@ -16,12 +16,7 @@ def create():
     log = doc.logger
 
     # xy figure
-    xy_fig = figure(
-        title=" ",
-        height=500,
-        width=500,
-        tools="pan,wheel_zoom,save,reset",
-    )
+    xy_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
 
     even_scatter_source = ColumnDataSource(dict(x=[], y=[], i=[]))
     odd_scatter_source = ColumnDataSource(dict(x=[], y=[], i=[]))
@@ -39,12 +34,7 @@ def create():
     xy_fig.plot.legend.click_policy = "hide"
 
     # ix figure
-    ix_fig = figure(
-        title=" ",
-        height=500,
-        width=500,
-        tools="pan,wheel_zoom,save,reset",
-    )
+    ix_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
 
     ix_fig.circle(x="i", y="x", source=even_scatter_source, legend_label="even")
     ix_fig.circle(
@@ -59,12 +49,7 @@ def create():
     ix_fig.plot.legend.click_policy = "hide"
 
     # iy figure
-    iy_fig = figure(
-        title=" ",
-        height=500,
-        width=500,
-        tools="pan,wheel_zoom,save,reset",
-    )
+    iy_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
 
     iy_fig.circle(x="i", y="y", source=even_scatter_source, legend_label="even")
     iy_fig.circle(

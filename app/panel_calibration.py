@@ -142,14 +142,14 @@ def create():
     )
 
     horiz_scatter_source = ColumnDataSource(dict(x=[], y=[], upper=[], lower=[]))
-    horiz_fig.circle(x="x", y="y", source=horiz_scatter_source, legend_label="data")
+    horiz_fig.circle(source=horiz_scatter_source, legend_label="data")
     # TODO: fix errorbars
     horiz_fig.add_layout(
         Whisker(base="x", upper="upper", lower="lower", source=horiz_scatter_source, visible=False)
     )
 
     horiz_line_source = ColumnDataSource(dict(x=[], y=[]))
-    horiz_fig.line(x="x", y="y", source=horiz_line_source, legend_label="fit")
+    horiz_fig.line(source=horiz_line_source, legend_label="fit")
 
     horiz_fig.plot.legend.click_policy = "hide"
 
@@ -163,13 +163,13 @@ def create():
     )
 
     vert_scatter_source = ColumnDataSource(dict(x=[], y=[], upper=[], lower=[]))
-    vert_fig.circle(x="x", y="y", source=vert_scatter_source, legend_label="data")
+    vert_fig.circle(source=vert_scatter_source, legend_label="data")
     vert_fig.add_layout(
         Whisker(base="x", upper="upper", lower="lower", source=vert_scatter_source, visible=False)
     )
 
     vert_line_source = ColumnDataSource(dict(x=[], y=[]))
-    vert_fig.line(x="x", y="y", source=vert_line_source, legend_label="fit")
+    vert_fig.line(source=vert_line_source, legend_label="fit")
 
     vert_fig.plot.legend.click_policy = "hide"
 
@@ -377,7 +377,7 @@ def create():
             # Position calibration value
             _set_epics_PV("YPOS.I", config["vert_calib"])
             # Intensity threshold value
-            _set_epics_PV("YPOS.INPJ", f'{device_name}:INTENSITY')
+            _set_epics_PV("YPOS.INPJ", f"{device_name}:INTENSITY")
             # Calculation
             _set_epics_PV("YPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
 
@@ -395,7 +395,7 @@ def create():
             # Position calibration value
             _set_epics_PV("XPOS.I", config["horiz_calib"])
             # Intensity threshold value
-            _set_epics_PV("XPOS.INPJ", f'{device_name}:INTENSITY')
+            _set_epics_PV("XPOS.INPJ", f"{device_name}:INTENSITY")
             # Calculation
             _set_epics_PV("XPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
             log.info("EPICS PVs updated")

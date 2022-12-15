@@ -20,70 +20,40 @@ def create():
     device2_select = Select(title="Device #2:", value=DEVICES[1], options=DEVICES)
 
     # xcorr figure
-    xcorr_fig = figure(
-        title=" ",
-        height=500,
-        width=500,
-        tools="pan,wheel_zoom,save,reset",
-    )
+    xcorr_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
 
     xcorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    xcorr_fig.circle(x="x", y="y", source=xcorr_even_scatter_source, legend_label="even")
+    xcorr_fig.circle(source=xcorr_even_scatter_source, legend_label="even")
 
     xcorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
     xcorr_fig.circle(
-        x="x",
-        y="y",
-        source=xcorr_odd_scatter_source,
-        line_color="red",
-        fill_color="red",
-        legend_label="odd",
+        source=xcorr_odd_scatter_source, line_color="red", fill_color="red", legend_label="odd"
     )
 
     xcorr_fig.plot.legend.click_policy = "hide"
 
     # ycorr figure
-    ycorr_fig = figure(
-        title=" ",
-        height=500,
-        width=500,
-        tools="pan,wheel_zoom,save,reset",
-    )
+    ycorr_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
 
     ycorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    ycorr_fig.circle(x="x", y="y", source=ycorr_even_scatter_source, legend_label="even")
+    ycorr_fig.circle(source=ycorr_even_scatter_source, legend_label="even")
 
     ycorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
     ycorr_fig.circle(
-        x="x",
-        y="y",
-        source=ycorr_odd_scatter_source,
-        line_color="red",
-        fill_color="red",
-        legend_label="odd",
+        source=ycorr_odd_scatter_source, line_color="red", fill_color="red", legend_label="odd"
     )
 
     ycorr_fig.plot.legend.click_policy = "hide"
 
     # icorr figure
-    icorr_fig = figure(
-        title=" ",
-        height=500,
-        width=500,
-        tools="pan,wheel_zoom,save,reset",
-    )
+    icorr_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
 
     icorr_even_scatter_source = ColumnDataSource(dict(x=[], y=[]))
-    icorr_fig.circle(x="x", y="y", source=icorr_even_scatter_source, legend_label="even")
+    icorr_fig.circle(source=icorr_even_scatter_source, legend_label="even")
 
     icorr_odd_scatter_source = ColumnDataSource(dict(x=[], y=[]))
     icorr_fig.circle(
-        x="x",
-        y="y",
-        source=icorr_odd_scatter_source,
-        line_color="red",
-        fill_color="red",
-        legend_label="odd",
+        source=icorr_odd_scatter_source, line_color="red", fill_color="red", legend_label="odd"
     )
 
     icorr_fig.plot.legend.click_policy = "hide"
