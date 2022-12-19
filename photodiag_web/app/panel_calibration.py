@@ -76,28 +76,23 @@ def get_shape(v):
 
 
 def pv_scan(pv_name, scan_range, channels, numShots):
-    high_lim = epics.PV(f"{pv_name}.HLM").get()
-    low_lim = epics.PV(f"{pv_name}.LLM").get()
-    if not all((low_lim <= scan_range) & (scan_range <= high_lim)):
-        scan_range = list(scan_range)
-        raise ValueError(
-            f"Soft-limit violation for {pv_name}, {scan_range=}, {low_lim=}, {high_lim=}"
-        )
-
-    pv = epics.PV(f"{pv_name}.VAL")
+    motor = epics.Motor(pv_name)
 
     scan_mean = []
     scan_std = []
     scan_all = []
 
     for pos in scan_range:
-        pv.put(pos, wait=True)
+        val = motor.move(pos, wait=True)
+        if val != 0:
+            raise ValueError(f"Error moving the motor {pv_name}, error value {val}")
+
         data = PBPS_get_data(channels, numShots)
         scan_mean.append([i.mean() for i in data])
         scan_std.append([i.std() for i in data])
         scan_all.append(data)
 
-    pv.put(0, wait=True)
+    motor.move(0, wait=True)
 
     return np.asarray(scan_mean), np.asarray(scan_std), np.asarray(scan_all)
 
