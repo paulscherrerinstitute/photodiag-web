@@ -206,9 +206,8 @@ def create():
             vert_line_source.data.update(x=[], y=[])
 
     def target_select_callback(_attr, _old, new):
-        targets = list(targets_pv.enum_strs)
-        if targets_pv.value != targets.index(new):
-            targets_pv.put(targets.index(new), wait=True)
+        if targets_pv.char_value != new:
+            targets_pv.put(list(target_select.options).index(new))
 
     target_select = Select(title="Target:")
     target_select.on_change("value", target_select_callback)
@@ -219,11 +218,11 @@ def create():
         else:
             doc.add_next_tick_callback(_lock_gui)
 
-    async def _update_target(value, enum_strs):
-        target_select.value = enum_strs[value]
+    async def _update_target(char_value):
+        target_select.value = char_value
 
-    def _probe_sp_callback(value, enum_strs, **_):
-        doc.add_next_tick_callback(partial(_update_target, value, enum_strs))
+    def _probe_sp_callback(char_value, **_):
+        doc.add_next_tick_callback(partial(_update_target, char_value))
 
     def device_select_callback(_attr, _old, new):
         global config, targets_pv
@@ -232,9 +231,8 @@ def create():
 
         # get target options
         targets_pv = epics.PV(f"{device_name}:PROBE_SP")
-        targets = list(targets_pv.enum_strs)
-        target_select.options = targets
-        target_select.value = targets[targets_pv.value]
+        target_select.options = list(targets_pv.enum_strs)
+        target_select.value = targets_pv.char_value
         targets_pv.add_callback(_probe_sp_callback)
 
         # set IN_POS callback control
