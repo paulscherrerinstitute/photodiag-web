@@ -1,12 +1,11 @@
 import logging
 from io import StringIO
 
-import panel_calibration  # pylint: disable=import-error
-import panel_correlation  # pylint: disable=import-error
-import panel_jitter  # pylint: disable=import-error
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import Div, Tabs, TextAreaInput
+
+from photodiag_web.app import panel_calibration, panel_correlation, panel_jitter
 
 doc = curdoc()
 doc.title = "photodiag-web"
@@ -16,7 +15,7 @@ title_img = Div(text="""<img src="/app/static/aramis.png" width=1000>""")
 stream = StringIO()
 handler = logging.StreamHandler(stream)
 handler.setFormatter(
-    logging.Formatter(fmt='%(asctime)s %(levelname)s: %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
+    logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 )
 logger = logging.getLogger(str(id(doc)))
 logger.propagate = False
