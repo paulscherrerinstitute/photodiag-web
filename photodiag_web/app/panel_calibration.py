@@ -252,7 +252,6 @@ def create():
         target_select.disabled = True
         calibrate_button.disabled = True
         push_results_button.disabled = True
-        push_elog_button.disabled = True
 
     async def _unlock_gui():
         device_select.disabled = False
@@ -260,7 +259,6 @@ def create():
         target_select.disabled = False
         calibrate_button.disabled = False
         push_results_button.disabled = False
-        push_elog_button.disabled = False
 
     def _calibrate():
         device_name = _get_device_name()
@@ -399,10 +397,7 @@ def create():
         client.stop_instance(pipeline_name)
         log.info("camera_server config updated")
 
-    push_results_button = Button(label="Push results")
-    push_results_button.on_click(push_results_button_callback)
-
-    def push_elog_button_callback():
+        # Push entry to elog
         calib_res = [
             f"{key} = {config[key]}"
             for key in (
@@ -428,8 +423,8 @@ def create():
         )
         log.info(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
 
-    push_elog_button = Button(label="Push elog")
-    push_elog_button.on_click(push_elog_button_callback)
+    push_results_button = Button(label="Push results / elog")
+    push_results_button.on_click(push_results_button_callback)
 
     # Trigger the initial device selection
     device_select.value = DEVICES[0]
@@ -441,7 +436,7 @@ def create():
             device_select,
             num_shots_spinner,
             target_select,
-            column(Spacer(height=18), row(calibrate_button, push_results_button, push_elog_button)),
+            column(Spacer(height=18), row(calibrate_button, push_results_button)),
         ),
     )
 
