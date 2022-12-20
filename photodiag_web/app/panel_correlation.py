@@ -167,7 +167,7 @@ def create():
 
     def push_elog_button_callback():
         msg_id = push_elog(
-            figures=((xcorr_fig, "xcorr.png"), (ycorr_fig, "ycorr.png"), (icorr_fig, "icorr.png")),
+            figures=((fig_layout, "correlation.png"),),
             message="",
             attributes={
                 "Author": "sf-photodiag",
@@ -182,8 +182,9 @@ def create():
     push_elog_button = Button(label="Push elog")
     push_elog_button.on_click(push_elog_button_callback)
 
+    fig_layout = gridplot([[xcorr_fig, ycorr_fig, icorr_fig]], toolbar_options={"logo": None})
     tab_layout = column(
-        gridplot([[xcorr_fig, ycorr_fig, icorr_fig]], toolbar_options={"logo": None}),
+        fig_layout,
         row(
             device_select,
             device2_select,

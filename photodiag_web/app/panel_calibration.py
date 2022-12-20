@@ -416,7 +416,7 @@ def create():
         ]
 
         msg_id = push_elog(
-            figures=((horiz_fig, "horiz.png"), (vert_fig, "vert.png")),
+            figures=((fig_layout, "calibration.png"),),
             message="\n".join(calib_res),
             attributes={
                 "Author": "sf-photodiag",
@@ -434,8 +434,9 @@ def create():
     # Trigger the initial device selection
     device_select.value = DEVICES[0]
 
+    fig_layout = gridplot([[horiz_fig, vert_fig]], toolbar_options={"logo": None})
     tab_layout = column(
-        gridplot([[horiz_fig, vert_fig]], toolbar_options={"logo": None}),
+        fig_layout,
         row(
             device_select,
             num_shots_spinner,
