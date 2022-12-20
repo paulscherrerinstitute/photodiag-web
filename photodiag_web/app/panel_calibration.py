@@ -119,10 +119,6 @@ def _get_device_name():
     return config["name"][:-5]  # remove "_proc" suffix
 
 
-def _set_epics_PV(name, value):
-    epics.PV(f"{_get_device_name()}:{name}").put(bytes(str(value), "utf8"))
-
-
 def create():
     doc = curdoc()
     log = doc.logger
@@ -339,56 +335,57 @@ def create():
     def push_results_button_callback():
         if device_select.value not in ("SAROP31-PBPS113", "SAROP31-PBPS149"):
             device_name = _get_device_name()
-            # Intensity
-            # Set channels
-            # Input data
-            _set_epics_PV("INTENSITY.INPA", config["down"])
-            _set_epics_PV("INTENSITY.INPB", config["up"])
-            _set_epics_PV("INTENSITY.INPC", config["right"])
-            _set_epics_PV("INTENSITY.INPD", config["left"])
-            # Calibration values
-            _set_epics_PV("INTENSITY.E", config["down_calib"])
-            _set_epics_PV("INTENSITY.F", config["up_calib"])
-            _set_epics_PV("INTENSITY.G", config["right_calib"])
-            _set_epics_PV("INTENSITY.H", config["left_calib"])
-            # Calculation
-            _set_epics_PV("INTENSITY.CALC", "A*E+B*F+C*G+D*H")
+            epics_data = {
+                # Intensity
+                # -- input data
+                "INTENSITY.INPA": config["down"],
+                "INTENSITY.INPB": config["up"],
+                "INTENSITY.INPC": config["right"],
+                "INTENSITY.INPD": config["left"],
+                # -- calibration values
+                "INTENSITY.E": config["down_calib"],
+                "INTENSITY.F": config["up_calib"],
+                "INTENSITY.G": config["right_calib"],
+                "INTENSITY.H": config["left_calib"],
+                # -- calculation
+                "INTENSITY.CALC": "A*E+B*F+C*G+D*H",
+                # YPOS
+                # -- input data
+                "YPOS.INPA": config["down"],
+                "YPOS.INPB": config["up"],
+                # -- threshold value
+                "YPOS.D": 0.2,
+                # -- diode calibration values
+                "YPOS.E": config["down_calib"],
+                "YPOS.F": config["up_calib"],
+                # -- null value
+                "YPOS.G": 0.0,
+                # -- position calibration value
+                "YPOS.I": config["vert_calib"],
+                # -- calculation
+                "YPOS.INPJ": f"{device_name}:INTENSITY",
+                "YPOS.CALC": "J<D?G:I*(A*E-B*F)/(A*E+B*F)",
+                # XPOS
+                # -- input data
+                "XPOS.INPA": config["right"],
+                "XPOS.INPB": config["left"],
+                # -- threshold value
+                "XPOS.D": 0.2,
+                # -- diode calibration values
+                "XPOS.E": config["right_calib"],
+                "XPOS.F": config["left_calib"],
+                # -- null value
+                "XPOS.G": 0.0,
+                # -- position calibration value
+                "XPOS.I": config["horiz_calib"],
+                # -- calculation
+                "XPOS.INPJ": f"{device_name}:INTENSITY",
+                "XPOS.CALC": "J<D?G:I*(A*E-B*F)/(A*E+B*F)",
+            }
 
-            # YPOS
-            # Set channels
-            _set_epics_PV("YPOS.INPA", config["down"])
-            _set_epics_PV("YPOS.INPB", config["up"])
-            # Threshold value
-            _set_epics_PV("YPOS.D", 0.2)
-            # Diode calibration value
-            _set_epics_PV("YPOS.E", config["down_calib"])
-            _set_epics_PV("YPOS.F", config["up_calib"])
-            # Null value
-            _set_epics_PV("YPOS.G", 0)
-            # Position calibration value
-            _set_epics_PV("YPOS.I", config["vert_calib"])
-            # Intensity threshold value
-            _set_epics_PV("YPOS.INPJ", f"{device_name}:INTENSITY")
-            # Calculation
-            _set_epics_PV("YPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
+            for chan, data in epics_data.items():
+                epics.caput(f"{device_name}:{chan}", data, wait=True)
 
-            # XPOS
-            # Set channels
-            _set_epics_PV("XPOS.INPA", config["right"])
-            _set_epics_PV("XPOS.INPB", config["left"])
-            # Threshold value
-            _set_epics_PV("XPOS.D", 0.2)
-            # Diode calibration value
-            _set_epics_PV("XPOS.E", config["right_calib"])
-            _set_epics_PV("XPOS.F", config["left_calib"])
-            # Null value
-            _set_epics_PV("XPOS.G", 0)
-            # Position calibration value
-            _set_epics_PV("XPOS.I", config["horiz_calib"])
-            # Intensity threshold value
-            _set_epics_PV("XPOS.INPJ", f"{device_name}:INTENSITY")
-            # Calculation
-            _set_epics_PV("XPOS.CALC", "J<D?G:I*(A*E-B*F)/(A*E+B*F)")
             log.info("EPICS PVs updated")
 
         # Push position calibration to pipeline
