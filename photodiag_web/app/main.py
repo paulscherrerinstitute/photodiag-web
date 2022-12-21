@@ -9,7 +9,7 @@ from photodiag_web.app import panel_calibration, panel_correlation, panel_jitter
 doc = curdoc()
 doc.title = "photodiag-web"
 
-title_img = Div(text="""<img src="/app/static/aramis.png" width=1000>""")
+title_img = Div(text="""<img src="/app/static/aramis.png" width="40%">""")
 
 # In app_hooks.py a StreamHandler was added to "photodiag_web" and "bokeh" loggers
 stream = logging.getLogger("photodiag_web").handlers[0].stream
