@@ -266,7 +266,7 @@ def create():
         I_mean, I_std, _ = PBPS_I_calibrate(channels, numShots)
         u_I = unumpy.uarray(I_mean, I_std)
         u_I_norm = 1 / u_I / 4
-        log.info("Diode response calibrated")
+        log.info(f"Diode response calibrated for {device_name}")
 
         pv_x_name = f"{device_name}:MOTOR_X1"
         try:
@@ -276,7 +276,7 @@ def create():
             doc.add_next_tick_callback(_unlock_gui)
             return
         else:
-            log.info("Horizontal position calibrated")
+            log.info(f"Horizontal position calibrated for {device_name}")
 
         u_x = unumpy.uarray(x_mean, x_std)
 
@@ -288,7 +288,7 @@ def create():
             doc.add_next_tick_callback(_unlock_gui)
             return
         else:
-            log.info("Vertical position calibrated")
+            log.info(f"Vertical position calibrated for {device_name}")
 
         u_y = unumpy.uarray(y_mean, y_std)
 
@@ -387,13 +387,13 @@ def create():
             for chan, data in epics_data.items():
                 epics.caput(f"{device_name}:{chan}", data, wait=True)
 
-            log.info("EPICS PVs updated")
+            log.info(f"EPICS PVs updated for {device_name}")
 
         # Push position calibration to pipeline
         pipeline_name = config["name"]
         client.save_pipeline_config(pipeline_name, config)
         client.stop_instance(pipeline_name)
-        log.info("camera_server config updated")
+        log.info(f"camera_server config updated for {device_name}")
 
         # Push entry to elog
         calib_res = [
@@ -419,7 +419,10 @@ def create():
                 "Title": _get_device_name(),
             },
         )
-        log.info(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
+        log.info(
+            f"Logbook entry created for {device_name} calibration: "
+            f"https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}"
+        )
 
     push_results_button = Button(label="Push results / elog")
     push_results_button.on_click(push_results_button_callback)

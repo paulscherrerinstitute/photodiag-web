@@ -168,6 +168,8 @@ def create():
     update_toggle.on_change("active", update_toggle_callback)
 
     def push_elog_button_callback():
+        device_name = device_select.value
+        device2_name = device2_select.value
         msg_id = push_elog(
             figures=((fig_layout, "correlation.png"),),
             message="",
@@ -176,10 +178,13 @@ def create():
                 "Entry": "Info",
                 "Domain": "ARAMIS",
                 "System": "Diagnostics",
-                "Title": f"{device2_select.value} vs {device_select.value} correlation",
+                "Title": f"{device2_name} vs {device_name} correlation",
             },
         )
-        log.info(f"Logbook entry created: https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}")
+        log.info(
+            f"Logbook entry created for {device2_name} vs {device_name} correlation: "
+            f"https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}"
+        )
 
     push_elog_button = Button(label="Push elog")
     push_elog_button.on_click(push_elog_button_callback)
