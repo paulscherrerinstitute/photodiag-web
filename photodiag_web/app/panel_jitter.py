@@ -13,6 +13,8 @@ from photodiag_web import DEVICES, push_elog
 
 log = logging.getLogger(__name__)
 
+device_name = ""
+
 
 def create():
     doc = curdoc()
@@ -65,13 +67,12 @@ def create():
 
     iy_fig.plot.legend.click_policy = "hide"
 
-    buffer = None
+    buffer = deque()
 
-    def collect_data():
+    def _collect_data():
         nonlocal buffer
         buffer = deque(maxlen=num_shots_spinner.value)
 
-        device_name = device_select.value
         xpos = f"{device_name}:XPOS"
         ypos = f"{device_name}:YPOS"
         intensity = f"{device_name}:INTENSITY"
@@ -83,11 +84,16 @@ def create():
                 data = message.data.data
                 buffer.append((is_odd, data[xpos].value, data[ypos].value, data[intensity].value))
 
-    async def update_plots():
+    async def _update_plots():
         if not buffer:
+            xy_fig.title.text = " "
+            ix_fig.title.text = " "
+            iy_fig.title.text = " "
+
+            even_scatter_source.data.update(x=[], y=[], i=[])
+            odd_scatter_source.data.update(x=[], y=[], i=[])
             return
 
-        device_name = device_select.value
         datetime_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         title = f"{device_name}, {datetime_now}"
         xy_fig.title.text = title
@@ -102,7 +108,18 @@ def create():
         even_scatter_source.data.update(x=data_even[:, 1], y=data_even[:, 2], i=data_even[:, 3])
         odd_scatter_source.data.update(x=data_odd[:, 1], y=data_odd[:, 2], i=data_odd[:, 3])
 
-    device_select = Select(title="Device:", value=DEVICES[0], options=DEVICES)
+    def device_select_callback(_attr, _old, new):
+        global device_name
+        device_name = new
+
+        # reset figures
+        buffer.clear()
+        doc.add_next_tick_callback(_update_plots)
+
+    device_select = Select(title="Device:", options=DEVICES)
+    device_select.on_change("value", device_select_callback)
+    device_select.value = DEVICES[0]
+
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
 
     update_plots_periodic_callback = None
@@ -110,12 +127,11 @@ def create():
     def update_toggle_callback(_attr, _old, new):
         nonlocal update_plots_periodic_callback
         if new:
-            thread = Thread(target=collect_data)
+            thread = Thread(target=_collect_data)
             thread.start()
 
-            update_plots_periodic_callback = doc.add_periodic_callback(update_plots, 1000)
+            update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 1000)
 
-            device_name = device_select.value
             xpos = f"{device_name}:XPOS"
             ypos = f"{device_name}:YPOS"
             intensity = f"{device_name}:INTENSITY"
@@ -147,7 +163,6 @@ def create():
     update_toggle.on_change("active", update_toggle_callback)
 
     def push_elog_button_callback():
-        device_name = device_select.value
         msg_id = push_elog(
             figures=((fig_layout, "jitter.png"),),
             message="",

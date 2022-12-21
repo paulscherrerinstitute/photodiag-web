@@ -13,13 +13,12 @@ from photodiag_web import DEVICES, push_elog
 
 log = logging.getLogger(__name__)
 
+device_name = ""
+device2_name = ""
+
 
 def create():
     doc = curdoc()
-
-    device_select = Select(title="Device:", value=DEVICES[0], options=DEVICES)
-    num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
-    device2_select = Select(title="Device #2:", value=DEVICES[1], options=DEVICES)
 
     # xcorr figure
     xcorr_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
@@ -60,14 +59,12 @@ def create():
 
     icorr_fig.plot.legend.click_policy = "hide"
 
-    buffer = None
+    buffer = deque()
 
-    def collect_data():
+    def _collect_data():
         nonlocal buffer
         buffer = deque(maxlen=num_shots_spinner.value)
 
-        device_name = device_select.value
-        device2_name = device2_select.value
         xpos = f"{device_name}:XPOS"
         xpos2 = f"{device2_name}:XPOS"
         ypos = f"{device_name}:YPOS"
@@ -92,12 +89,21 @@ def create():
                     )
                 )
 
-    async def update_plots():
+    async def _update_plots():
         if not buffer:
+            xcorr_fig.title.text = " "
+            ycorr_fig.title.text = " "
+            icorr_fig.title.text = " "
+
+            xcorr_even_scatter_source.data.update(x=[], y=[])
+            ycorr_even_scatter_source.data.update(x=[], y=[])
+            icorr_even_scatter_source.data.update(x=[], y=[])
+
+            xcorr_odd_scatter_source.data.update(x=[], y=[])
+            ycorr_odd_scatter_source.data.update(x=[], y=[])
+            icorr_odd_scatter_source.data.update(x=[], y=[])
             return
 
-        device_name = device_select.value
-        device2_name = device2_select.value
         datetime_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         title = f"{device2_name} vs {device_name}, {datetime_now}"
         xcorr_fig.title.text = title
@@ -117,7 +123,30 @@ def create():
         ycorr_odd_scatter_source.data.update(x=data_odd[:, 2], y=data_odd[:, 5])
         icorr_odd_scatter_source.data.update(x=data_odd[:, 3], y=data_odd[:, 6])
 
-    device_select = Select(title="Device:", value=DEVICES[0], options=DEVICES)
+    def device_select_callback(_attr, _old, new):
+        global device_name
+        device_name = new
+
+        # reset figures
+        buffer.clear()
+        doc.add_next_tick_callback(_update_plots)
+
+    device_select = Select(title="Device:", options=DEVICES)
+    device_select.on_change("value", device_select_callback)
+    device_select.value = DEVICES[0]
+
+    def device2_select_callback(_attr, _old, new):
+        global device2_name
+        device2_name = new
+
+        # reset figures
+        buffer.clear()
+        doc.add_next_tick_callback(_update_plots)
+
+    device2_select = Select(title="Device #2:", options=DEVICES)
+    device2_select.on_change("value", device2_select_callback)
+    device2_select.value = DEVICES[1]
+
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
 
     update_plots_periodic_callback = None
@@ -125,13 +154,11 @@ def create():
     def update_toggle_callback(_attr, _old, new):
         nonlocal update_plots_periodic_callback
         if new:
-            thread = Thread(target=collect_data)
+            thread = Thread(target=_collect_data)
             thread.start()
 
-            update_plots_periodic_callback = doc.add_periodic_callback(update_plots, 1000)
+            update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 1000)
 
-            device_name = device_select.value
-            device2_name = device2_select.value
             xpos = f"{device_name}:XPOS"
             xpos2 = f"{device2_name}:XPOS"
             ypos = f"{device_name}:YPOS"
@@ -168,8 +195,6 @@ def create():
     update_toggle.on_change("active", update_toggle_callback)
 
     def push_elog_button_callback():
-        device_name = device_select.value
-        device2_name = device2_select.value
         msg_id = push_elog(
             figures=((fig_layout, "correlation.png"),),
             message="",
