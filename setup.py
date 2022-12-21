@@ -10,5 +10,7 @@ setup(
     version=version,
     description="A webserver for photon diagnostics services.",
     packages=find_packages(),
+    package_data={"": ["static/*"]},
+    include_package_data=True,
     license="GNU GPLv3",
 )
