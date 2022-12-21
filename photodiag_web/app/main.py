@@ -12,18 +12,9 @@ doc.title = "photodiag-web"
 
 title_img = Div(text="""<img src="/app/static/aramis.png" width=1000>""")
 
-stream = StringIO()
-handler = logging.StreamHandler(stream)
-handler.setFormatter(
-    logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-)
-logger = logging.getLogger(str(id(doc)))
-logger.propagate = False
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
-log_textareainput = TextAreaInput(title="print output:", height=150, width=750)
-
-doc.logger = logger
+# In app_hooks.py we create a "photodiag_web" logger with a single StreamHandler
+stream = logging.getLogger("photodiag_web").handlers[0].stream
+log_textareainput = TextAreaInput(title="logging output:", height=150, width=750)
 
 bokeh_stream = StringIO()
 bokeh_handler = logging.StreamHandler(bokeh_stream)

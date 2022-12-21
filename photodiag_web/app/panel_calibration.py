@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import datetime
 from functools import partial
@@ -17,6 +18,7 @@ from photodiag_web import DEVICES, push_elog
 scan_x_range = np.linspace(-0.3, 0.3, 3)
 scan_y_range = np.linspace(-0.3, 0.3, 3)
 
+log = logging.getLogger(__name__)
 client = PipelineClient()
 config = None
 targets_pv = None
@@ -121,7 +123,6 @@ def _get_device_name():
 
 def create():
     doc = curdoc()
-    log = doc.logger
 
     # horiz figure
     horiz_fig = figure(
