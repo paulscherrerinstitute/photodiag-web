@@ -10,6 +10,8 @@ source:
 build:
   noarch: python
   number: 0
+  entry_points:
+    - photodiag_web = photodiag_web.cli:main
 
 requirements:
   build:
