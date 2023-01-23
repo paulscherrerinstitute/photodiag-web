@@ -4,7 +4,7 @@ from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import Div, Tabs, TextAreaInput
 
-from photodiag_web.app import panel_calibration, panel_correlation, panel_jitter
+from photodiag_web.app import panel_calibration, panel_correlation, panel_jitter, panel_spect_corr
 
 doc = curdoc()
 doc.title = "photodiag-web"
@@ -23,7 +23,14 @@ bokeh_log_textareainput = TextAreaInput(title="server output:", height=150, widt
 doc.add_root(
     column(
         title_img,
-        Tabs(tabs=[panel_calibration.create(), panel_correlation.create(), panel_jitter.create()]),
+        Tabs(
+            tabs=[
+                panel_calibration.create(),
+                panel_correlation.create(),
+                panel_jitter.create(),
+                panel_spect_corr.create(),
+            ]
+        ),
         row(log_textareainput, bokeh_log_textareainput),
     )
 )
