@@ -334,8 +334,8 @@ def create():
     calibrate_button.on_click(calibrate_button_callback)
 
     def push_results_button_callback():
+        device_name = _get_device_name()
         if device_select.value not in ("SAROP31-PBPS113", "SAROP31-PBPS149"):
-            device_name = _get_device_name()
             epics_data = {
                 # Intensity
                 # -- input data
