@@ -13,12 +13,11 @@ from photodiag_web import DEVICES, push_elog
 
 log = logging.getLogger(__name__)
 
-device_name = ""
-device2_name = ""
-
 
 def create():
     doc = curdoc()
+    device_name = ""
+    device2_name = ""
 
     # xcorr figure
     xcorr_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
@@ -124,7 +123,7 @@ def create():
         icorr_odd_scatter_source.data.update(x=data_odd[:, 3], y=data_odd[:, 6])
 
     def device_select_callback(_attr, _old, new):
-        global device_name
+        nonlocal device_name
         device_name = new
 
         # reset figures
@@ -136,7 +135,7 @@ def create():
     device_select.value = DEVICES[0]
 
     def device2_select_callback(_attr, _old, new):
-        global device2_name
+        nonlocal device2_name
         device2_name = new
 
         # reset figures

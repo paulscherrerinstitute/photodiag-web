@@ -13,11 +13,10 @@ from photodiag_web import DEVICES, push_elog
 
 log = logging.getLogger(__name__)
 
-device_name = ""
-
 
 def create():
     doc = curdoc()
+    device_name = ""
 
     # xy figure
     xy_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
@@ -109,7 +108,7 @@ def create():
         odd_scatter_source.data.update(x=data_odd[:, 1], y=data_odd[:, 2], i=data_odd[:, 3])
 
     def device_select_callback(_attr, _old, new):
-        global device_name
+        nonlocal device_name
         device_name = new
 
         # reset figures

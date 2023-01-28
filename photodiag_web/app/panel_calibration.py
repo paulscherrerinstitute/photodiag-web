@@ -20,8 +20,6 @@ scan_y_range = np.linspace(-0.3, 0.3, 3)
 
 log = logging.getLogger(__name__)
 client = PipelineClient()
-config = None
-targets_pv = None
 
 
 def make_arrays(pvs, n_pulses):
@@ -117,12 +115,10 @@ def fit(xdata, ydata):
     return popt
 
 
-def _get_device_name():
-    return config["name"][:-5]  # remove "_proc" suffix
-
-
 def create():
     doc = curdoc()
+    config = {}
+    targets_pv = None
 
     # horiz figure
     horiz_fig = figure(
@@ -164,6 +160,9 @@ def create():
     vert_fig.line(source=vert_line_source, legend_label="fit")
 
     vert_fig.plot.legend.click_policy = "hide"
+
+    def _get_device_name():
+        return config["name"][:-5]  # remove "_proc" suffix
 
     def _update_plots():
         calib_datetime = config.get("calib_datetime", "")
@@ -222,7 +221,7 @@ def create():
         doc.add_next_tick_callback(partial(_update_target, char_value))
 
     def device_select_callback(_attr, _old, new):
-        global config, targets_pv
+        nonlocal config, targets_pv
         config = client.get_pipeline_config(new + "_proc")
         device_name = _get_device_name()
 
