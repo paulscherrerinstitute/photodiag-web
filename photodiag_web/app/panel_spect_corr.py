@@ -11,12 +11,10 @@ from bokeh.plotting import curdoc, figure
 log = logging.getLogger(__name__)
 
 
-def pearson_1D_horiz(spectra, I0):
-    spectra_len = spectra.shape[1]
-    res = np.empty(spectra_len)
-    for i in range(spectra_len):
-        res[i] = np.corrcoef(spectra[:, i], I0)[0, 1]
-
+def pearson_1D(spectra, I0):
+    diff1 = spectra - np.mean(spectra, axis=0)
+    diff2 = I0[:, np.newaxis] - np.mean(I0)
+    res = np.sum(diff1 * diff2, axis=0) / np.sqrt(np.sum(diff1**2, axis=0) * np.sum(diff2**2))
     return res
 
 
@@ -150,11 +148,11 @@ def create():
         bins = np.linspace(min_int_bin, max_int_bin, 20)
         mid_bin_ind = int(len(bins) / 2)
 
-        pearson_1D_horiz_raw = pearson_1D_horiz(spec_y, intensity)
+        pearson_coeff = pearson_1D(spec_y, intensity)
         spectra_binned = spectra_bin_I0(intensity, bins, spec_y)
 
         # update glyph sources
-        corr_coef_line_source.data.update(x=spec_x, y=pearson_1D_horiz_raw)
+        corr_coef_line_source.data.update(x=spec_x, y=pearson_coeff)
 
         max_spectra = np.max(spectra_binned)
         spec_int_line1_source.data.update(x=spec_x, y=spectra_binned[-1, :] / max_spectra)
