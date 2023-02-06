@@ -1,4 +1,4 @@
 source /opt/miniconda3/etc/profile.d/conda.sh
 conda activate test
 
-bokeh serve /opt/photodiag_web/photodiag_web/app --ico-path=none --port=5011
+python /opt/photodiag_web/photodiag_web/cli.py --ico-path=none --allow-websocket-origin=* --port=5011
