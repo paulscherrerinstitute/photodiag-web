@@ -85,6 +85,8 @@ def pv_scan(pv_name, scan_range, channels, numShots):
     for pos in scan_range:
         val = motor.move(pos, wait=True)
         if val != 0:
+            if val == -12:
+                raise ValueError(f"Motor position outside soft limits: {motor.LLM} {motor.HLM}")
             raise ValueError(f"Error moving the motor {pv_name}, error value {val}")
 
         data = PBPS_get_data(channels, numShots)
