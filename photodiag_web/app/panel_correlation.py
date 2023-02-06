@@ -76,15 +76,16 @@ def create():
                 message = stream.receive()
                 is_odd = message.data.pulse_id % 2
                 data = message.data.data
+                # Normalize by values of the first device
                 buffer.append(
                     (
                         is_odd,
                         data[xpos].value,
                         data[ypos].value,
                         data[intensity].value,
-                        data[xpos2].value,
-                        data[ypos2].value,
-                        data[intensity2].value,
+                        data[xpos2].value / data[xpos].value,
+                        data[ypos2].value / data[ypos].value,
+                        data[intensity2].value / data[intensity].value,
                     )
                 )
 
@@ -166,11 +167,11 @@ def create():
             intensity2 = f"{device2_name}:INTENSITY"
 
             xcorr_fig.xaxis.axis_label = xpos
-            xcorr_fig.yaxis.axis_label = xpos2
+            xcorr_fig.yaxis.axis_label = f"{xpos2} / {xpos}"
             ycorr_fig.xaxis.axis_label = ypos
-            ycorr_fig.yaxis.axis_label = ypos2
+            ycorr_fig.yaxis.axis_label = f"{ypos2} / {ypos}"
             icorr_fig.xaxis.axis_label = intensity
-            icorr_fig.yaxis.axis_label = intensity2
+            icorr_fig.yaxis.axis_label = f"{intensity2} / {intensity}"
 
             device_select.disabled = True
             device2_select.disabled = True
