@@ -11,9 +11,3 @@ def on_server_loaded(_server_context):
     logger = logging.getLogger("photodiag_web")
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
-
-    bokeh_handler = logging.StreamHandler(StringIO())
-    bokeh_handler.setFormatter(formatter)
-    bokeh_logger = logging.getLogger("bokeh")
-    bokeh_logger.setLevel(logging.WARNING)
-    bokeh_logger.addHandler(bokeh_handler)
