@@ -72,16 +72,16 @@ def create():
         nonlocal buffer
         buffer = deque(maxlen=num_shots_spinner.value)
 
-        xpos = f"{device_name}:XPOS"
-        ypos = f"{device_name}:YPOS"
-        intensity = f"{device_name}:INTENSITY"
+        xpos_ch = f"{device_name}:XPOS"
+        ypos_ch = f"{device_name}:YPOS"
+        i0_ch = f"{device_name}:INTENSITY"
 
-        with bsread.source(channels=[xpos, ypos, intensity]) as stream:
+        with bsread.source(channels=[xpos_ch, ypos_ch, i0_ch]) as stream:
             while update_toggle.active:
                 message = stream.receive()
                 is_odd = message.data.pulse_id % 2
                 data = message.data.data
-                buffer.append((is_odd, data[xpos].value, data[ypos].value, data[intensity].value))
+                buffer.append((is_odd, data[xpos_ch].value, data[ypos_ch].value, data[i0_ch].value))
 
     async def _update_plots():
         if not buffer:
@@ -131,16 +131,16 @@ def create():
 
             update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 1000)
 
-            xpos = f"{device_name}:XPOS"
-            ypos = f"{device_name}:YPOS"
-            intensity = f"{device_name}:INTENSITY"
+            xpos_ch = f"{device_name}:XPOS"
+            ypos_ch = f"{device_name}:YPOS"
+            i0_ch = f"{device_name}:INTENSITY"
 
-            xy_fig.xaxis.axis_label = xpos
-            xy_fig.yaxis.axis_label = ypos
-            ix_fig.xaxis.axis_label = intensity
-            ix_fig.yaxis.axis_label = xpos
-            iy_fig.xaxis.axis_label = intensity
-            iy_fig.yaxis.axis_label = ypos
+            xy_fig.xaxis.axis_label = xpos_ch
+            xy_fig.yaxis.axis_label = ypos_ch
+            ix_fig.xaxis.axis_label = i0_ch
+            ix_fig.yaxis.axis_label = xpos_ch
+            iy_fig.xaxis.axis_label = i0_ch
+            iy_fig.yaxis.axis_label = ypos_ch
 
             device_select.disabled = True
             num_shots_spinner.disabled = True

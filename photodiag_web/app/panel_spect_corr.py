@@ -79,29 +79,29 @@ def create():
 
     cache_spec_x = []
     buffer_spec_y = deque()
-    buffer_intensity = deque()
+    buffer_i0 = deque()
 
     def _collect_data():
-        nonlocal cache_spec_x, buffer_spec_y, buffer_intensity
+        nonlocal cache_spec_x, buffer_spec_y, buffer_i0
         cache_spec_x = []
         buffer_spec_y = deque(maxlen=num_shots_spinner.value)
-        buffer_intensity = deque(maxlen=num_shots_spinner.value)
+        buffer_i0 = deque(maxlen=num_shots_spinner.value)
 
         spec_x_ch = "SARFE10-PSSS059:SPECTRUM_X"
         spec_y_ch = "SARFE10-PSSS059:SPECTRUM_Y"
-        intensity_ch = "SARFE10-PBPS053:INTENSITY"
+        i0_ch = "SARFE10-PBPS053:INTENSITY"
 
-        with bsread.source(channels=[spec_x_ch, spec_y_ch, intensity_ch]) as stream:
+        with bsread.source(channels=[spec_x_ch, spec_y_ch, i0_ch]) as stream:
             while update_toggle.active:
                 message = stream.receive()
                 data = message.data.data
                 spec_x = data[spec_x_ch].value
                 spec_y = data[spec_y_ch].value
-                intensity = data[intensity_ch].value
-                if spec_x is not None and spec_y is not None and intensity is not None:
+                i0 = data[i0_ch].value
+                if spec_x is not None and spec_y is not None and i0 is not None:
                     cache_spec_x = spec_x
                     buffer_spec_y.append(spec_y)
-                    buffer_intensity.append(intensity)
+                    buffer_i0.append(i0)
 
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
 
@@ -141,15 +141,15 @@ def create():
 
         spec_x = cache_spec_x
         spec_y = np.array(buffer_spec_y)
-        intensity = np.array(buffer_intensity)
+        i0 = np.array(buffer_i0)
 
-        min_int_bin = np.min(intensity)
-        max_int_bin = np.max(intensity)
+        min_int_bin = np.min(i0)
+        max_int_bin = np.max(i0)
         bins = np.linspace(min_int_bin, max_int_bin, 20)
         mid_bin_ind = int(len(bins) / 2)
 
-        pearson_coeff = pearson_1D(spec_y, intensity)
-        spectra_binned = spectra_bin_I0(intensity, bins, spec_y)
+        pearson_coeff = pearson_1D(spec_y, i0)
+        spectra_binned = spectra_bin_I0(i0, bins, spec_y)
 
         # update glyph sources
         corr_coef_line_source.data.update(x=spec_x, y=pearson_coeff)

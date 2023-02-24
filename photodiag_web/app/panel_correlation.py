@@ -64,30 +64,32 @@ def create():
         nonlocal buffer
         buffer = deque(maxlen=num_shots_spinner.value)
 
-        xpos = f"{device_name}:XPOS"
-        xpos2 = f"{device2_name}:XPOS"
-        ypos = f"{device_name}:YPOS"
-        ypos2 = f"{device2_name}:YPOS"
-        intensity = f"{device_name}:INTENSITY"
-        intensity2 = f"{device2_name}:INTENSITY"
+        xpos_ch = f"{device_name}:XPOS"
+        xpos2_ch = f"{device2_name}:XPOS"
+        ypos_ch = f"{device_name}:YPOS"
+        ypos2_ch = f"{device2_name}:YPOS"
+        i0_ch = f"{device_name}:INTENSITY"
+        i02_ch = f"{device2_name}:INTENSITY"
 
-        with bsread.source(channels=[intensity, xpos, ypos, intensity2, xpos2, ypos2]) as stream:
+        with bsread.source(
+            channels=[i0_ch, xpos_ch, ypos_ch, i02_ch, xpos2_ch, ypos2_ch]
+        ) as stream:
             while update_toggle.active:
                 message = stream.receive()
                 is_odd = message.data.pulse_id % 2
                 data = message.data.data
+                xpos = data[xpos_ch].value
+                xpos2 = data[xpos2_ch].value
+                ypos = data[ypos_ch].value
+                ypos2 = data[ypos2_ch].value
+                i0 = data[i0_ch].value
+                i02 = data[i02_ch].value
+
                 # Normalize by values of the first device
-                buffer.append(
-                    (
-                        is_odd,
-                        data[xpos].value,
-                        data[ypos].value,
-                        data[intensity].value,
-                        data[xpos2].value / data[xpos].value,
-                        data[ypos2].value / data[ypos].value,
-                        data[intensity2].value / data[intensity].value,
-                    )
-                )
+                xpos_ratio = None if (xpos is None or xpos2 is None or xpos == 0) else xpos2 / xpos
+                ypos_ratio = None if (ypos is None or ypos2 is None or ypos == 0) else ypos2 / ypos
+                i0_ratio = None if (i0 is None or i02 is None or i0 == 0) else i02 / i0
+                buffer.append((is_odd, xpos, ypos, i0, xpos_ratio, ypos_ratio, i0_ratio))
 
     async def _update_plots():
         if not buffer:
@@ -159,19 +161,19 @@ def create():
 
             update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 1000)
 
-            xpos = f"{device_name}:XPOS"
-            xpos2 = f"{device2_name}:XPOS"
-            ypos = f"{device_name}:YPOS"
-            ypos2 = f"{device2_name}:YPOS"
-            intensity = f"{device_name}:INTENSITY"
-            intensity2 = f"{device2_name}:INTENSITY"
+            xpos_ch = f"{device_name}:XPOS"
+            xpos2_ch = f"{device2_name}:XPOS"
+            ypos_ch = f"{device_name}:YPOS"
+            ypos2_ch = f"{device2_name}:YPOS"
+            i0_ch = f"{device_name}:INTENSITY"
+            i02_ch = f"{device2_name}:INTENSITY"
 
-            xcorr_fig.xaxis.axis_label = xpos
-            xcorr_fig.yaxis.axis_label = f"{xpos2} / {xpos}"
-            ycorr_fig.xaxis.axis_label = ypos
-            ycorr_fig.yaxis.axis_label = f"{ypos2} / {ypos}"
-            icorr_fig.xaxis.axis_label = intensity
-            icorr_fig.yaxis.axis_label = f"{intensity2} / {intensity}"
+            xcorr_fig.xaxis.axis_label = xpos_ch
+            xcorr_fig.yaxis.axis_label = f"{xpos2_ch} / {xpos_ch}"
+            ycorr_fig.xaxis.axis_label = ypos_ch
+            ycorr_fig.yaxis.axis_label = f"{ypos2_ch} / {ypos_ch}"
+            icorr_fig.xaxis.axis_label = i0_ch
+            icorr_fig.yaxis.axis_label = f"{i02_ch} / {i0_ch}"
 
             device_select.disabled = True
             device2_select.disabled = True
