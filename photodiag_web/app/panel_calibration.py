@@ -245,14 +245,12 @@ def create():
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=500, step=100, low=100)
 
     async def _lock_gui():
-        device_select.disabled = True
         num_shots_spinner.disabled = True
         target_select.disabled = True
         calibrate_button.disabled = True
         push_results_button.disabled = True
 
     async def _unlock_gui():
-        device_select.disabled = False
         num_shots_spinner.disabled = False
         target_select.disabled = False
         calibrate_button.disabled = False
