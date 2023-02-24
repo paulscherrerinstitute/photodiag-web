@@ -1,4 +1,3 @@
-import logging
 from collections import deque
 from datetime import datetime
 from threading import Thread
@@ -11,11 +10,10 @@ from bokeh.plotting import curdoc, figure
 
 from photodiag_web import DEVICES, push_elog
 
-log = logging.getLogger(__name__)
-
 
 def create():
     doc = curdoc()
+    log = doc.logger
     device_name = ""
 
     # xy figure

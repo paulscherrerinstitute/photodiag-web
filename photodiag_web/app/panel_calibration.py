@@ -1,4 +1,3 @@
-import logging
 import time
 from datetime import datetime
 from functools import partial
@@ -18,7 +17,6 @@ from photodiag_web import DEVICES, push_elog
 scan_x_range = np.linspace(-0.3, 0.3, 3)
 scan_y_range = np.linspace(-0.3, 0.3, 3)
 
-log = logging.getLogger(__name__)
 client = PipelineClient()
 
 
@@ -119,6 +117,7 @@ def fit(xdata, ydata):
 
 def create():
     doc = curdoc()
+    log = doc.logger
     config = {}
     targets_pv = None
 

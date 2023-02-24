@@ -1,4 +1,3 @@
-import logging
 from collections import deque
 from threading import Thread
 
@@ -7,8 +6,6 @@ import numpy as np
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, Spacer, Spinner, TabPanel, Toggle
 from bokeh.plotting import curdoc, figure
-
-log = logging.getLogger(__name__)
 
 
 def pearson_1D(spectra, I0):

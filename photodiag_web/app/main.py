@@ -1,4 +1,5 @@
 import logging
+from io import StringIO
 
 from bokeh.io import curdoc
 from bokeh.layouts import column
@@ -11,8 +12,15 @@ doc.title = "photodiag-web"
 
 title_img = Div(text="""<img src="/app/static/aramis.png" width="1000pix", heigh="200pix">""")
 
-# In app_hooks.py a StreamHandler was added to "photodiag_web" logger
-stream = logging.getLogger("photodiag_web").handlers[0].stream
+stream = StringIO()
+handler = logging.StreamHandler(stream)
+handler.setFormatter(
+    logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+)
+logger = logging.getLogger(str(id(doc)))
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
+doc.logger = logger
 
 log_textareainput = TextAreaInput(title="logging output:", height=150, width=1500)
 
