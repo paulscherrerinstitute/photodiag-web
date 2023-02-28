@@ -119,7 +119,13 @@ def create():
     doc = curdoc()
     log = doc.logger
     config = {}
-    targets_pv = None
+
+    targets_pvs = {}
+    in_pos_pvs = {}
+    for device_name in DEVICES:
+        targets_pvs[device_name] = epics.PV(f"{device_name}:PROBE_SP")
+        in_pos_pvs[device_name] = epics.PV(f"{device_name}:IN_POS")
+    doc.pvs = (*targets_pvs.values(), *in_pos_pvs.values())
 
     # horiz figure
     horiz_fig = figure(
@@ -203,6 +209,8 @@ def create():
             vert_line_source.data.update(x=[], y=[])
 
     def target_select_callback(_attr, _old, new):
+        device_name = _get_device_name()
+        targets_pv = targets_pvs[device_name]
         if targets_pv.char_value != new:
             targets_pv.put(list(target_select.options).index(new))
 
@@ -222,19 +230,25 @@ def create():
         doc.add_next_tick_callback(partial(_update_target, char_value))
 
     def device_select_callback(_attr, _old, new):
-        nonlocal config, targets_pv
+        nonlocal config
+
+        # clear old callbacks
+        if config:
+            old_device_name = _get_device_name()
+            targets_pvs[old_device_name].clear_callbacks()
+            in_pos_pvs[old_device_name].clear_callbacks()
+
         config = client.get_pipeline_config(new + "_proc")
         device_name = _get_device_name()
 
         # get target options
-        targets_pv = epics.PV(f"{device_name}:PROBE_SP")
+        targets_pv = targets_pvs[device_name]
         target_select.options = list(targets_pv.enum_strs)
         target_select.value = targets_pv.char_value
         targets_pv.add_callback(_probe_sp_callback)
 
         # set IN_POS callback control
-        in_pos_pv = epics.PV(f"{device_name}:IN_POS")
-        in_pos_pv.add_callback(_in_pos_callback)
+        in_pos_pvs[device_name].add_callback(_in_pos_callback)
 
         _update_plots()
 
