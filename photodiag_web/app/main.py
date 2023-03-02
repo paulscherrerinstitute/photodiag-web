@@ -16,7 +16,7 @@ from photodiag_web.app import (
 doc = curdoc()
 doc.title = "photodiag-web"
 
-title_img = Div(text="""<img src="/app/static/aramis.png" width="1000pix", heigh="200pix">""")
+title_img = Div(text="""<img src="/app/static/aramis.png" width="1000" height="200">""")
 
 stream = StringIO()
 handler = logging.StreamHandler(stream)
