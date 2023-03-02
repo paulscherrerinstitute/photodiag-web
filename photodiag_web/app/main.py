@@ -40,7 +40,15 @@ spectral_tabs = Tabs(tabs=[panel_spect_corr.create(), panel_spect_peaks.create()
 spectral_panel = TabPanel(child=column(spectral_img, spectral_tabs), title="Spectral")
 
 # Final layout
-doc.add_root(column(Tabs(tabs=[position_panel, spectral_panel]), log_textareainput))
+doc.add_root(
+    column(
+        Tabs(
+            tabs=[position_panel, spectral_panel],
+            stylesheets=[".bk-tab {font-weight: bold; font-size: 20px;}"],
+        ),
+        log_textareainput,
+    )
+)
 
 
 def update_stdout():
