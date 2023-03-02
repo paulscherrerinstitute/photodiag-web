@@ -5,7 +5,13 @@ from bokeh.io import curdoc
 from bokeh.layouts import column
 from bokeh.models import Div, Tabs, TextAreaInput
 
-from photodiag_web.app import panel_calibration, panel_correlation, panel_jitter, panel_spect_corr
+from photodiag_web.app import (
+    panel_calibration,
+    panel_correlation,
+    panel_jitter,
+    panel_spect_corr,
+    panel_spect_peaks,
+)
 
 doc = curdoc()
 doc.title = "photodiag-web"
@@ -35,6 +41,7 @@ doc.add_root(
                 panel_correlation.create(),
                 panel_jitter.create(),
                 panel_spect_corr.create(),
+                panel_spect_peaks.create(),
             ]
         ),
         log_textareainput,
