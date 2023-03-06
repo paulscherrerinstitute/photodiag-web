@@ -8,6 +8,7 @@ from bokeh.models import Div, TabPanel, Tabs, TextAreaInput
 from photodiag_web.app import (
     panel_calibration,
     panel_correlation,
+    panel_diode_check,
     panel_jitter,
     panel_spect_corr,
     panel_spect_peaks,
@@ -31,7 +32,12 @@ log_textareainput = TextAreaInput(title="logging output:", height=150, width=150
 
 position_img = Div(text="""<img src="/app/static/aramis.png" width="1000" height="200">""")
 position_tabs = Tabs(
-    tabs=[panel_calibration.create(), panel_correlation.create(), panel_jitter.create()]
+    tabs=[
+        panel_calibration.create(),
+        panel_correlation.create(),
+        panel_jitter.create(),
+        panel_diode_check.create(),
+    ]
 )
 position_panel = TabPanel(child=column(position_img, position_tabs), title="Position")
 
