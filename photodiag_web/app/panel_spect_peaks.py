@@ -4,14 +4,16 @@ from threading import Thread
 import bsread
 import numpy as np
 from bokeh.layouts import column, row
-from bokeh.models import ColumnDataSource, Spacer, Spinner, TabPanel, Toggle
+from bokeh.models import ColumnDataSource, Select, Spacer, Spinner, TabPanel, Toggle
 from bokeh.plotting import curdoc, figure
 from scipy.signal import find_peaks
 
 
-def create():
+def create(devices):
     doc = curdoc()
     log = doc.logger
+
+    device_name = ""
 
     # single shot spectrum figure
     single_shot_fig = figure(
@@ -60,8 +62,8 @@ def create():
         single_shot_cache = [[], [], [], [], 0]
         buffer_num_peaks = deque(maxlen=num_shots_spinner.value)
 
-        spec_x_ch = "SARFE10-PSSS059:SPECTRUM_X"
-        spec_y_ch = "SARFE10-PSSS059:SPECTRUM_Y"
+        spec_x_ch = f"{device_name}:SPECTRUM_X"
+        spec_y_ch = f"{device_name}:SPECTRUM_Y"
 
         kernel_size = kernel_size_spinner.value
         kernel = np.ones(kernel_size) / kernel_size
@@ -142,10 +144,24 @@ def create():
         peak_scatter_source.data.update(x=spec_x[peaks], y=spec_y_grad[peaks])
         num_peaks_dist_quad_source.data.update(left=edges[:-1], right=edges[1:], top=counts)
 
+    def device_select_callback(_attr, _old, new):
+        nonlocal device_name, single_shot_cache
+        device_name = new
+
+        # reset figures
+        single_shot_cache = [[], [], [], [], 0]
+        buffer_num_peaks.clear()
+        doc.add_next_tick_callback(_update_plots)
+
+    device_select = Select(title="Device:", options=devices)
+    device_select.on_change("value", device_select_callback)
+    device_select.value = devices[0]
+
     fig_layout = row(column(single_shot_fig, gradient_fig), num_peaks_dist_fig)
     tab_layout = column(
         fig_layout,
         row(
+            device_select,
             num_shots_spinner,
             kernel_size_spinner,
             peak_dist_spinner,
