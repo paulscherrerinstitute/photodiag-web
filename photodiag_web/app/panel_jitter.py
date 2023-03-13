@@ -74,12 +74,17 @@ def create():
         ypos_ch = f"{device_name}:YPOS"
         i0_ch = f"{device_name}:INTENSITY"
 
-        with bsread.source(channels=[xpos_ch, ypos_ch, i0_ch]) as stream:
-            while update_toggle.active:
-                message = stream.receive()
-                is_odd = message.data.pulse_id % 2
-                data = message.data.data
-                buffer.append((is_odd, data[xpos_ch].value, data[ypos_ch].value, data[i0_ch].value))
+        try:
+            with bsread.source(channels=[xpos_ch, ypos_ch, i0_ch]) as stream:
+                while update_toggle.active:
+                    message = stream.receive()
+                    is_odd = message.data.pulse_id % 2
+                    data = message.data.data
+                    buffer.append(
+                        (is_odd, data[xpos_ch].value, data[ypos_ch].value, data[i0_ch].value)
+                    )
+        except Exception as e:
+            log.error(e)
 
     async def _update_plots():
         if not buffer:

@@ -17,6 +17,7 @@ DIODES = ["up", "down", "left", "right"]
 
 def create():
     doc = curdoc()
+    log = doc.logger
     device_name = ""
     diode_name = ""
 
@@ -52,27 +53,30 @@ def create():
         config = client.get_pipeline_config(device_name + "_proc")
         diodes_ch = [config[diode] for diode in DIODES]
 
-        with bsread.source(channels=diodes_ch) as stream:
-            while update_toggle.active:
-                message = stream.receive()
-                data = message.data.data
+        try:
+            with bsread.source(channels=diodes_ch) as stream:
+                while update_toggle.active:
+                    message = stream.receive()
+                    data = message.data.data
 
-                i0 = data[config[diode_name]].value
-                if i0 is None or i0 == 0:
-                    # Normalization is not possible
-                    buffer.append((None, None, None, None))
-                    continue
+                    i0 = data[config[diode_name]].value
+                    if i0 is None or i0 == 0:
+                        # Normalization is not possible
+                        buffer.append((None, None, None, None))
+                        continue
 
-                ratios = []
-                for diode in DIODES:
-                    if diode == diode_name:
-                        continue  # i0 case
+                    ratios = []
+                    for diode in DIODES:
+                        if diode == diode_name:
+                            continue  # i0 case
 
-                    # Normalize by values of the selected diode
-                    val = data[config[diode]].value
-                    ratios.append(None if val is None else val / i0)
+                        # Normalize by values of the selected diode
+                        val = data[config[diode]].value
+                        ratios.append(None if val is None else val / i0)
 
-                buffer.append((i0, *ratios))
+                    buffer.append((i0, *ratios))
+        except Exception as e:
+            log.error(e)
 
     async def _update_plots():
         if not buffer:

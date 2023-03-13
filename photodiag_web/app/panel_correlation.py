@@ -69,25 +69,32 @@ def create():
         i0_ch = f"{device_name}:INTENSITY"
         i02_ch = f"{device2_name}:INTENSITY"
 
-        with bsread.source(
-            channels=[i0_ch, xpos_ch, ypos_ch, i02_ch, xpos2_ch, ypos2_ch]
-        ) as stream:
-            while update_toggle.active:
-                message = stream.receive()
-                is_odd = message.data.pulse_id % 2
-                data = message.data.data
-                xpos = data[xpos_ch].value
-                xpos2 = data[xpos2_ch].value
-                ypos = data[ypos_ch].value
-                ypos2 = data[ypos2_ch].value
-                i0 = data[i0_ch].value
-                i02 = data[i02_ch].value
+        try:
+            with bsread.source(
+                channels=[i0_ch, xpos_ch, ypos_ch, i02_ch, xpos2_ch, ypos2_ch]
+            ) as stream:
+                while update_toggle.active:
+                    message = stream.receive()
+                    is_odd = message.data.pulse_id % 2
+                    data = message.data.data
+                    xpos = data[xpos_ch].value
+                    xpos2 = data[xpos2_ch].value
+                    ypos = data[ypos_ch].value
+                    ypos2 = data[ypos2_ch].value
+                    i0 = data[i0_ch].value
+                    i02 = data[i02_ch].value
 
-                # Normalize by values of the first device
-                xpos_ratio = None if (xpos is None or xpos2 is None or xpos == 0) else xpos2 / xpos
-                ypos_ratio = None if (ypos is None or ypos2 is None or ypos == 0) else ypos2 / ypos
-                i0_ratio = None if (i0 is None or i02 is None or i0 == 0) else i02 / i0
-                buffer.append((is_odd, xpos, ypos, i0, xpos_ratio, ypos_ratio, i0_ratio))
+                    # Normalize by values of the first device
+                    xpos_ratio = (
+                        None if (xpos is None or xpos2 is None or xpos == 0) else xpos2 / xpos
+                    )
+                    ypos_ratio = (
+                        None if (ypos is None or ypos2 is None or ypos == 0) else ypos2 / ypos
+                    )
+                    i0_ratio = None if (i0 is None or i02 is None or i0 == 0) else i02 / i0
+                    buffer.append((is_odd, xpos, ypos, i0, xpos_ratio, ypos_ratio, i0_ratio))
+        except Exception as e:
+            log.error(e)
 
     async def _update_plots():
         if not buffer:

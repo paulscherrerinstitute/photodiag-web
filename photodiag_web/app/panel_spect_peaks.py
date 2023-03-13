@@ -11,6 +11,7 @@ from scipy.signal import find_peaks
 
 def create():
     doc = curdoc()
+    log = doc.logger
 
     # single shot spectrum figure
     single_shot_fig = figure(
@@ -67,21 +68,24 @@ def create():
         peak_dist = peak_dist_spinner.value
         peak_height = peak_height_spinner.value
 
-        with bsread.source(channels=[spec_x_ch, spec_y_ch]) as stream:
-            while update_toggle.active:
-                message = stream.receive()
-                data = message.data.data
-                spec_x = data[spec_x_ch].value
-                spec_y = data[spec_y_ch].value
-                if spec_x is not None and spec_y is not None:
-                    spec_y = spec_y / np.max(spec_y)
-                    spec_y_convolved = np.convolve(spec_y, kernel, mode="same")
-                    spec_y_grad = np.abs(np.gradient(spec_y_convolved))
-                    peaks, _ = find_peaks(spec_y_grad, distance=peak_dist, height=peak_height)
-                    num_peaks = len(peaks) / 2
+        try:
+            with bsread.source(channels=[spec_x_ch, spec_y_ch]) as stream:
+                while update_toggle.active:
+                    message = stream.receive()
+                    data = message.data.data
+                    spec_x = data[spec_x_ch].value
+                    spec_y = data[spec_y_ch].value
+                    if spec_x is not None and spec_y is not None:
+                        spec_y = spec_y / np.max(spec_y)
+                        spec_y_convolved = np.convolve(spec_y, kernel, mode="same")
+                        spec_y_grad = np.abs(np.gradient(spec_y_convolved))
+                        peaks, _ = find_peaks(spec_y_grad, distance=peak_dist, height=peak_height)
+                        num_peaks = len(peaks) / 2
 
-                    single_shot_cache = [spec_x, spec_y, spec_y_convolved, spec_y_grad, peaks]
-                    buffer_num_peaks.append(num_peaks)
+                        single_shot_cache = [spec_x, spec_y, spec_y_convolved, spec_y_grad, peaks]
+                        buffer_num_peaks.append(num_peaks)
+        except Exception as e:
+            log.error(e)
 
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
     kernel_size_spinner = Spinner(title="Kernel size:", mode="int", value=100, low=1)

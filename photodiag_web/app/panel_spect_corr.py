@@ -30,6 +30,7 @@ def spectra_bin_I0(I0, I0_bins, spectra):
 
 def create():
     doc = curdoc()
+    log = doc.logger
 
     # correlation coefficient figure
     corr_coef_fig = figure(
@@ -88,17 +89,20 @@ def create():
         spec_y_ch = "SARFE10-PSSS059:SPECTRUM_Y"
         i0_ch = "SARFE10-PBPS053:INTENSITY"
 
-        with bsread.source(channels=[spec_x_ch, spec_y_ch, i0_ch]) as stream:
-            while update_toggle.active:
-                message = stream.receive()
-                data = message.data.data
-                spec_x = data[spec_x_ch].value
-                spec_y = data[spec_y_ch].value
-                i0 = data[i0_ch].value
-                if spec_x is not None and spec_y is not None and i0 is not None:
-                    cache_spec_x = spec_x
-                    buffer_spec_y.append(spec_y)
-                    buffer_i0.append(i0)
+        try:
+            with bsread.source(channels=[spec_x_ch, spec_y_ch, i0_ch]) as stream:
+                while update_toggle.active:
+                    message = stream.receive()
+                    data = message.data.data
+                    spec_x = data[spec_x_ch].value
+                    spec_y = data[spec_y_ch].value
+                    i0 = data[i0_ch].value
+                    if spec_x is not None and spec_y is not None and i0 is not None:
+                        cache_spec_x = spec_x
+                        buffer_spec_y.append(spec_y)
+                        buffer_i0.append(i0)
+        except Exception as e:
+            log.error(e)
 
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
 
