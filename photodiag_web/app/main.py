@@ -43,7 +43,13 @@ position_panel = TabPanel(child=column(position_img, position_tabs), title="Posi
 
 spectral_img = Div(text="""<img src="/placeholder.png" width="1000" height="200">""")
 spectral_tabs = Tabs(
-    tabs=[panel_spect_int_corr.create(), panel_spect_peaks.create(["SARFE10-PSSS059"])]
+    tabs=[
+        panel_spect_int_corr.create(),
+        panel_spect_peaks.create("Aramis Spectral peaks analysis", ["SARFE10-PSSS059"]),
+        panel_spect_peaks.create(
+            "Athos Spectral peaks analysis", ["SATOP21-PMOS127-2D", "SATOP31-PMOS132-2D"]
+        ),
+    ]
 )
 spectral_panel = TabPanel(child=column(spectral_img, spectral_tabs), title="Spectral")
 

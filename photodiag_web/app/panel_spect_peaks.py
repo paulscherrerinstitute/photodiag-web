@@ -9,7 +9,7 @@ from bokeh.plotting import curdoc, figure
 from scipy.signal import find_peaks
 
 
-def create(devices):
+def create(title, devices):
     doc = curdoc()
     log = doc.logger
 
@@ -170,4 +170,4 @@ def create(devices):
         ),
     )
 
-    return TabPanel(child=tab_layout, title="Aramis Spectral peaks analysis")
+    return TabPanel(child=tab_layout, title=title)
