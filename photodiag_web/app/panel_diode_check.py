@@ -59,7 +59,9 @@ def create():
 
                 i0 = data[config[diode_name]].value
                 if i0 is None or i0 == 0:
+                    # Normalization is not possible
                     buffer.append((None, None, None, None))
+                    continue
 
                 ratios = []
                 for diode in DIODES:
