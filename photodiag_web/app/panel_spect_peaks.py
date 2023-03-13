@@ -104,6 +104,7 @@ def create(title, devices):
 
             update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 1000)
 
+            device_select.disabled = True
             num_shots_spinner.disabled = True
             kernel_size_spinner.disabled = True
             peak_dist_spinner.disabled = True
@@ -114,6 +115,7 @@ def create(title, devices):
         else:
             doc.remove_periodic_callback(update_plots_periodic_callback)
 
+            device_select.disabled = False
             num_shots_spinner.disabled = False
             kernel_size_spinner.disabled = False
             peak_dist_spinner.disabled = False
