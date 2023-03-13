@@ -173,4 +173,4 @@ def create():
         fig_layout, row(num_shots_spinner, column(Spacer(height=18), update_toggle))
     )
 
-    return TabPanel(child=tab_layout, title="spect-intensity corr")
+    return TabPanel(child=tab_layout, title="Aramis Spectral intensity correlation")

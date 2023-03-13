@@ -154,4 +154,4 @@ def create():
         ),
     )
 
-    return TabPanel(child=tab_layout, title="spect-peaks")
+    return TabPanel(child=tab_layout, title="Aramis Spectral peaks analysis")

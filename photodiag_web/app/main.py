@@ -10,7 +10,7 @@ from photodiag_web.app import (
     panel_correlation,
     panel_diode_check,
     panel_jitter,
-    panel_spect_corr,
+    panel_spect_int_corr,
     panel_spect_peaks,
 )
 
@@ -42,7 +42,7 @@ position_tabs = Tabs(
 position_panel = TabPanel(child=column(position_img, position_tabs), title="Position")
 
 spectral_img = Div(text="""<img src="/placeholder.png" width="1000" height="200">""")
-spectral_tabs = Tabs(tabs=[panel_spect_corr.create(), panel_spect_peaks.create()])
+spectral_tabs = Tabs(tabs=[panel_spect_int_corr.create(), panel_spect_peaks.create()])
 spectral_panel = TabPanel(child=column(spectral_img, spectral_tabs), title="Spectral")
 
 # Final layout
