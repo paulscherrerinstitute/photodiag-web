@@ -347,7 +347,7 @@ def create():
 
     def push_results_button_callback():
         device_name = _get_device_name()
-        if device_select.value not in ("SAROP31-PBPS113", "SAROP31-PBPS149"):
+        if device_select.value not in ("SAROP31-PBPS113", "SAROP31-PBPS149", "SAROP21-PBPS133"):
             epics_data = {
                 # Intensity
                 # -- input data
