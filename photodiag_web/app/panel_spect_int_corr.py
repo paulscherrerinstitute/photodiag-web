@@ -1,5 +1,5 @@
 from collections import deque
-from threading import Thread
+from threading import Lock, Thread
 
 import bsread
 import numpy as np
@@ -31,6 +31,8 @@ def spectra_bin_I0(I0, I0_bins, spectra):
 def create():
     doc = curdoc()
     log = doc.logger
+
+    lock = Lock()
 
     # correlation coefficient figure
     corr_coef_fig = figure(
@@ -99,8 +101,9 @@ def create():
                     i0 = data[i0_ch].value
                     if spec_x is not None and spec_y is not None and i0 is not None:
                         cache_spec_x = spec_x
-                        buffer_spec_y.append(spec_y)
-                        buffer_i0.append(i0)
+                        with lock:
+                            buffer_spec_y.append(spec_y)
+                            buffer_i0.append(i0)
         except Exception as e:
             log.error(e)
 
@@ -141,8 +144,11 @@ def create():
             return
 
         spec_x = cache_spec_x
-        spec_y = np.array(buffer_spec_y)
-        i0 = np.array(buffer_i0)
+        with lock:
+            buffer_spec_y_cp = buffer_spec_y.copy()
+            buffer_i0_cp = buffer_i0.copy()
+        spec_y = np.array(buffer_spec_y_cp)
+        i0 = np.array(buffer_i0_cp)
 
         min_int_bin = np.min(i0)
         max_int_bin = np.max(i0)
