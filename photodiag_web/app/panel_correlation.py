@@ -14,8 +14,10 @@ from photodiag_web import DEVICES, push_elog
 def create():
     doc = curdoc()
     log = doc.logger
-    device_name = ""
+    device1_name = ""
+    device1_channels = ("", "", "")
     device2_name = ""
+    device2_channels = ("", "", "")
 
     # xcorr figure
     xcorr_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
@@ -61,38 +63,22 @@ def create():
     def _collect_data():
         nonlocal buffer
         buffer = deque(maxlen=num_shots_spinner.value)
-
-        xpos_ch = f"{device_name}:XPOS"
-        xpos2_ch = f"{device2_name}:XPOS"
-        ypos_ch = f"{device_name}:YPOS"
-        ypos2_ch = f"{device2_name}:YPOS"
-        i0_ch = f"{device_name}:INTENSITY"
-        i02_ch = f"{device2_name}:INTENSITY"
+        channels = (*device1_channels, *device2_channels)
 
         try:
-            with bsread.source(
-                channels=[i0_ch, xpos_ch, ypos_ch, i02_ch, xpos2_ch, ypos2_ch]
-            ) as stream:
+            with bsread.source(channels=channels) as stream:
                 while update_toggle.active:
                     message = stream.receive()
                     is_odd = message.data.pulse_id % 2
-                    data = message.data.data
-                    xpos = data[xpos_ch].value
-                    xpos2 = data[xpos2_ch].value
-                    ypos = data[ypos_ch].value
-                    ypos2 = data[ypos2_ch].value
-                    i0 = data[i0_ch].value
-                    i02 = data[i02_ch].value
+                    values = [message.data.data[ch].value for ch in channels]
 
-                    # Normalize by values of the first device
-                    xpos_ratio = (
-                        None if (xpos is None or xpos2 is None or xpos == 0) else xpos2 / xpos
-                    )
-                    ypos_ratio = (
-                        None if (ypos is None or ypos2 is None or ypos == 0) else ypos2 / ypos
-                    )
-                    i0_ratio = None if (i0 is None or i02 is None or i0 == 0) else i02 / i0
-                    buffer.append((is_odd, xpos, ypos, i0, xpos_ratio, ypos_ratio, i0_ratio))
+                    # Normalize values of the second device by values of the first device
+                    if not (any(val is None for val in values) or 0 in values[:3]):
+                        values[3] /= values[0]
+                        values[4] /= values[1]
+                        values[5] /= values[2]
+                        buffer.append((is_odd, *values))
+
         except Exception as e:
             log.error(e)
 
@@ -112,7 +98,7 @@ def create():
             return
 
         datetime_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        title = f"{device2_name} vs {device_name}, {datetime_now}"
+        title = f"{device2_name} vs {device1_name}, {datetime_now}"
         xcorr_fig.title.text = title
         ycorr_fig.title.text = title
         icorr_fig.title.text = title
@@ -130,21 +116,23 @@ def create():
         ycorr_odd_scatter_source.data.update(x=data_odd[:, 2], y=data_odd[:, 5])
         icorr_odd_scatter_source.data.update(x=data_odd[:, 3], y=data_odd[:, 6])
 
-    def device_select_callback(_attr, _old, new):
-        nonlocal device_name
-        device_name = new
+    def device1_select_callback(_attr, _old, new):
+        nonlocal device1_name, device1_channels
+        device1_name = new
+        device1_channels = f"{new}:XPOS", f"{new}:YPOS", f"{new}:INTENSITY"
 
         # reset figures
         buffer.clear()
         doc.add_next_tick_callback(_update_plots)
 
-    device_select = Select(title="Device:", options=DEVICES)
-    device_select.on_change("value", device_select_callback)
-    device_select.value = DEVICES[0]
+    device1_select = Select(title="Device #1:", options=DEVICES)
+    device1_select.on_change("value", device1_select_callback)
+    device1_select.value = DEVICES[0]
 
     def device2_select_callback(_attr, _old, new):
-        nonlocal device2_name
+        nonlocal device2_name, device2_channels
         device2_name = new
+        device2_channels = f"{new}:XPOS", f"{new}:YPOS", f"{new}:INTENSITY"
 
         # reset figures
         buffer.clear()
@@ -166,21 +154,17 @@ def create():
 
             update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 1000)
 
-            xpos_ch = f"{device_name}:XPOS"
-            xpos2_ch = f"{device2_name}:XPOS"
-            ypos_ch = f"{device_name}:YPOS"
-            ypos2_ch = f"{device2_name}:YPOS"
-            i0_ch = f"{device_name}:INTENSITY"
-            i02_ch = f"{device2_name}:INTENSITY"
+            xpos1_ch, ypos1_ch, i01_ch = device1_channels
+            xpos2_ch, ypos2_ch, i02_ch = device2_channels
 
-            xcorr_fig.xaxis.axis_label = xpos_ch
-            xcorr_fig.yaxis.axis_label = f"{xpos2_ch} / {xpos_ch}"
-            ycorr_fig.xaxis.axis_label = ypos_ch
-            ycorr_fig.yaxis.axis_label = f"{ypos2_ch} / {ypos_ch}"
-            icorr_fig.xaxis.axis_label = i0_ch
-            icorr_fig.yaxis.axis_label = f"{i02_ch} / {i0_ch}"
+            xcorr_fig.xaxis.axis_label = xpos1_ch
+            xcorr_fig.yaxis.axis_label = f"{xpos2_ch} / {xpos1_ch}"
+            ycorr_fig.xaxis.axis_label = ypos1_ch
+            ycorr_fig.yaxis.axis_label = f"{ypos2_ch} / {ypos1_ch}"
+            icorr_fig.xaxis.axis_label = i01_ch
+            icorr_fig.yaxis.axis_label = f"{i02_ch} / {i01_ch}"
 
-            device_select.disabled = True
+            device1_select.disabled = True
             device2_select.disabled = True
             num_shots_spinner.disabled = True
             push_elog_button.disabled = True
@@ -190,7 +174,7 @@ def create():
         else:
             doc.remove_periodic_callback(update_plots_periodic_callback)
 
-            device_select.disabled = False
+            device1_select.disabled = False
             device2_select.disabled = False
             num_shots_spinner.disabled = False
             push_elog_button.disabled = False
@@ -210,11 +194,11 @@ def create():
                 "Entry": "Info",
                 "Domain": "ARAMIS",
                 "System": "Diagnostics",
-                "Title": f"{device2_name} vs {device_name} correlation",
+                "Title": f"{device2_name} vs {device1_name} correlation",
             },
         )
         log.info(
-            f"Logbook entry created for {device2_name} vs {device_name} correlation: "
+            f"Logbook entry created for {device2_name} vs {device1_name} correlation: "
             f"https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}"
         )
 
@@ -225,7 +209,7 @@ def create():
     tab_layout = column(
         fig_layout,
         row(
-            device_select,
+            device1_select,
             device2_select,
             num_shots_spinner,
             column(Spacer(height=18), row(update_toggle, push_elog_button)),

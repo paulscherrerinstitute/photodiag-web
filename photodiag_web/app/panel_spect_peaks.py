@@ -14,6 +14,7 @@ def create(title, devices):
     log = doc.logger
 
     device_name = ""
+    device_channels = ("", "")
 
     # single shot spectrum figure
     single_shot_fig = figure(
@@ -62,30 +63,26 @@ def create(title, devices):
         single_shot_cache = [[], [], [], [], 0]
         buffer_num_peaks = deque(maxlen=num_shots_spinner.value)
 
-        spec_x_ch = f"{device_name}:SPECTRUM_X"
-        spec_y_ch = f"{device_name}:SPECTRUM_Y"
-
         kernel_size = kernel_size_spinner.value
         kernel = np.ones(kernel_size) / kernel_size
         peak_dist = peak_dist_spinner.value
         peak_height = peak_height_spinner.value
 
         try:
-            with bsread.source(channels=[spec_x_ch, spec_y_ch]) as stream:
+            with bsread.source(channels=device_channels) as stream:
                 while update_toggle.active:
                     message = stream.receive()
-                    data = message.data.data
-                    spec_x = data[spec_x_ch].value
-                    spec_y = data[spec_y_ch].value
-                    if spec_x is not None and spec_y is not None:
+                    values = [message.data.data[ch].value for ch in device_channels]
+                    if not any(val is None for val in values):
+                        spec_x, spec_y = values
                         spec_y = spec_y / np.max(spec_y)
                         spec_y_convolved = np.convolve(spec_y, kernel, mode="same")
                         spec_y_grad = np.abs(np.gradient(spec_y_convolved))
                         peaks, _ = find_peaks(spec_y_grad, distance=peak_dist, height=peak_height)
-                        num_peaks = len(peaks) / 2
 
                         single_shot_cache = [spec_x, spec_y, spec_y_convolved, spec_y_grad, peaks]
-                        buffer_num_peaks.append(num_peaks)
+                        buffer_num_peaks.append(len(peaks) / 2)
+
         except Exception as e:
             log.error(e)
 
@@ -147,8 +144,9 @@ def create(title, devices):
         num_peaks_dist_quad_source.data.update(left=edges[:-1], right=edges[1:], top=counts)
 
     def device_select_callback(_attr, _old, new):
-        nonlocal device_name, single_shot_cache
+        nonlocal device_name, device_channels, single_shot_cache
         device_name = new
+        device_channels = f"{device_name}:SPECTRUM_X", f"{device_name}:SPECTRUM_Y"
 
         # reset figures
         single_shot_cache = [[], [], [], [], 0]

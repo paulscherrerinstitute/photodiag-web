@@ -52,29 +52,19 @@ def create():
         buffer = deque(maxlen=num_shots_spinner.value)
         config = client.get_pipeline_config(device_name + "_proc")
         diodes_ch = [config[diode] for diode in DIODES]
+        i0_ind = DIODES.index(diode_name)
 
         try:
             with bsread.source(channels=diodes_ch) as stream:
                 while update_toggle.active:
                     message = stream.receive()
-                    data = message.data.data
+                    values = [message.data.data[ch].value for ch in diodes_ch]
+                    # Normalize by selected diode value (= i0)
+                    if not (any(val is None for val in values) or values[i0_ind] == 0):
+                        i0 = values.pop(i0_ind)
+                        values = [val / i0 for val in values]
+                        buffer.append((i0, *values))
 
-                    i0 = data[config[diode_name]].value
-                    if i0 is None or i0 == 0:
-                        # Normalization is not possible
-                        buffer.append((None, None, None, None))
-                        continue
-
-                    ratios = []
-                    for diode in DIODES:
-                        if diode == diode_name:
-                            continue  # i0 case
-
-                        # Normalize by values of the selected diode
-                        val = data[config[diode]].value
-                        ratios.append(None if val is None else val / i0)
-
-                    buffer.append((i0, *ratios))
         except Exception as e:
             log.error(e)
 

@@ -15,6 +15,7 @@ def create():
     doc = curdoc()
     log = doc.logger
     device_name = ""
+    device_channels = ("", "", "")
 
     # xy figure
     xy_fig = figure(title=" ", height=500, width=500, tools="pan,wheel_zoom,save,reset")
@@ -70,19 +71,15 @@ def create():
         nonlocal buffer
         buffer = deque(maxlen=num_shots_spinner.value)
 
-        xpos_ch = f"{device_name}:XPOS"
-        ypos_ch = f"{device_name}:YPOS"
-        i0_ch = f"{device_name}:INTENSITY"
-
         try:
-            with bsread.source(channels=[xpos_ch, ypos_ch, i0_ch]) as stream:
+            with bsread.source(channels=device_channels) as stream:
                 while update_toggle.active:
                     message = stream.receive()
                     is_odd = message.data.pulse_id % 2
-                    data = message.data.data
-                    buffer.append(
-                        (is_odd, data[xpos_ch].value, data[ypos_ch].value, data[i0_ch].value)
-                    )
+                    values = [message.data.data[ch].value for ch in device_channels]
+                    if not any(val is None for val in values):
+                        buffer.append((is_odd, *values))
+
         except Exception as e:
             log.error(e)
 
@@ -111,8 +108,9 @@ def create():
         odd_scatter_source.data.update(x=data_odd[:, 1], y=data_odd[:, 2], i=data_odd[:, 3])
 
     def device_select_callback(_attr, _old, new):
-        nonlocal device_name
+        nonlocal device_name, device_channels
         device_name = new
+        device_channels = f"{new}:XPOS", f"{new}:YPOS", f"{new}:INTENSITY"
 
         # reset figures
         buffer.clear()
@@ -134,9 +132,7 @@ def create():
 
             update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 1000)
 
-            xpos_ch = f"{device_name}:XPOS"
-            ypos_ch = f"{device_name}:YPOS"
-            i0_ch = f"{device_name}:INTENSITY"
+            xpos_ch, ypos_ch, i0_ch = device_channels
 
             xy_fig.xaxis.axis_label = xpos_ch
             xy_fig.yaxis.axis_label = ypos_ch

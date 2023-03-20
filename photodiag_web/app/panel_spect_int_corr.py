@@ -31,6 +31,11 @@ def spectra_bin_I0(I0, I0_bins, spectra):
 def create():
     doc = curdoc()
     log = doc.logger
+    device_channels = (
+        "SARFE10-PSSS059:SPECTRUM_X",
+        "SARFE10-PSSS059:SPECTRUM_Y",
+        "SARFE10-PBPS053:INTENSITY",
+    )
 
     lock = Lock()
 
@@ -87,23 +92,17 @@ def create():
         buffer_spec_y = deque(maxlen=num_shots_spinner.value)
         buffer_i0 = deque(maxlen=num_shots_spinner.value)
 
-        spec_x_ch = "SARFE10-PSSS059:SPECTRUM_X"
-        spec_y_ch = "SARFE10-PSSS059:SPECTRUM_Y"
-        i0_ch = "SARFE10-PBPS053:INTENSITY"
-
         try:
-            with bsread.source(channels=[spec_x_ch, spec_y_ch, i0_ch]) as stream:
+            with bsread.source(channels=device_channels) as stream:
                 while update_toggle.active:
                     message = stream.receive()
-                    data = message.data.data
-                    spec_x = data[spec_x_ch].value
-                    spec_y = data[spec_y_ch].value
-                    i0 = data[i0_ch].value
-                    if spec_x is not None and spec_y is not None and i0 is not None:
-                        cache_spec_x = spec_x
+                    values = [message.data.data[ch].value for ch in device_channels]
+                    if not any(val is None for val in values):
+                        cache_spec_x, spec_y, i0 = values
                         with lock:
                             buffer_spec_y.append(spec_y)
                             buffer_i0.append(i0)
+
         except Exception as e:
             log.error(e)
 
