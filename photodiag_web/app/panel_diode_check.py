@@ -57,8 +57,8 @@ def create():
         try:
             with bsread.source(channels=diodes_ch) as stream:
                 while update_toggle.active:
-                    message = stream.receive()
-                    values = [message.data.data[ch].value for ch in diodes_ch]
+                    msg_data = stream.receive().data
+                    values = [msg_data.data.get(ch).value for ch in diodes_ch]
                     # Normalize by selected diode value (= i0)
                     if not (any(val is None for val in values) or values[i0_ind] == 0):
                         i0 = values.pop(i0_ind)

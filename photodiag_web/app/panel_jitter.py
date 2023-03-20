@@ -74,9 +74,9 @@ def create():
         try:
             with bsread.source(channels=device_channels) as stream:
                 while update_toggle.active:
-                    message = stream.receive()
-                    is_odd = message.data.pulse_id % 2
-                    values = [message.data.data[ch].value for ch in device_channels]
+                    msg_data = stream.receive().data
+                    is_odd = msg_data.pulse_id % 2
+                    values = [msg_data.data.get(ch).value for ch in device_channels]
                     if not any(val is None for val in values):
                         buffer.append((is_odd, *values))
 

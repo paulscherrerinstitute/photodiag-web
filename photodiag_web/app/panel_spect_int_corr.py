@@ -95,8 +95,8 @@ def create():
         try:
             with bsread.source(channels=device_channels) as stream:
                 while update_toggle.active:
-                    message = stream.receive()
-                    values = [message.data.data[ch].value for ch in device_channels]
+                    msg_data = stream.receive().data
+                    values = [msg_data.data.get(ch).value for ch in device_channels]
                     if not any(val is None for val in values):
                         cache_spec_x, spec_y, i0 = values
                         with lock:

@@ -68,9 +68,9 @@ def create():
         try:
             with bsread.source(channels=channels) as stream:
                 while update_toggle.active:
-                    message = stream.receive()
-                    is_odd = message.data.pulse_id % 2
-                    values = [message.data.data[ch].value for ch in channels]
+                    msg_data = stream.receive().data
+                    is_odd = msg_data.pulse_id % 2
+                    values = [msg_data.data.get(ch).value for ch in channels]
 
                     # Normalize values of the second device by values of the first device
                     if not (any(val is None for val in values) or 0 in values[:3]):
