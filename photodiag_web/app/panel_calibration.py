@@ -48,7 +48,7 @@ def PBPS_get_data(channels, n_pulses=100, wait_time=0.5):
         counters[ichannel] += 1
 
         if counters[ichannel] == n_pulses:
-            pv.clear_callbacks()
+            pv.disconnect()
 
     for i, pv in enumerate(pvs):
         pv.add_callback(callback=on_value_change, pv=pv, ichannel=i)
