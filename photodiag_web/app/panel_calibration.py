@@ -246,9 +246,12 @@ def create():
         target_select.options = list(targets_pv.enum_strs)
         target_select.value = targets_pv.char_value
         targets_pv.add_callback(_probe_sp_callback)
+        targets_pv.run_callbacks()
 
         # set IN_POS callback control
-        in_pos_pvs[device_name].add_callback(_in_pos_callback)
+        in_pos_pv = in_pos_pvs[device_name]
+        in_pos_pv.add_callback(_in_pos_callback)
+        in_pos_pv.run_callbacks()
 
         _update_plots()
 
