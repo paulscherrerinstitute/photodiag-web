@@ -125,7 +125,7 @@ def create():
     for device_name in DEVICES:
         targets_pvs[device_name] = epics.PV(f"{device_name}:PROBE_SP")
         in_pos_pvs[device_name] = epics.PV(f"{device_name}:IN_POS")
-    doc.pvs = (*targets_pvs.values(), *in_pos_pvs.values())
+    doc.pvs.extend([*targets_pvs.values(), *in_pos_pvs.values()])
 
     # horiz figure
     horiz_fig = figure(

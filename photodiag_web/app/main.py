@@ -10,12 +10,14 @@ from photodiag_web.app import (
     panel_correlation,
     panel_diode_check,
     panel_jitter,
+    panel_spect_autocorr,
     panel_spect_int_corr,
     panel_spect_peaks,
 )
 
 doc = curdoc()
 doc.title = "photodiag-web"
+doc.pvs = []
 
 stream = StringIO()
 handler = logging.StreamHandler(stream)
@@ -48,6 +50,10 @@ spectral_tabs = Tabs(
         panel_spect_peaks.create("Aramis Spectral peaks analysis", ["SARFE10-PSSS059"]),
         panel_spect_peaks.create(
             "Athos Spectral peaks analysis", ["SATOP21-PMOS127-2D", "SATOP31-PMOS132-2D"]
+        ),
+        panel_spect_autocorr.create(
+            "Aramis/Athos Spectral autocorrelation",
+            ["SARFE10-PSSS059", "SATOP21-PMOS127-2D", "SATOP31-PMOS132-2D"],
         ),
     ]
 )
