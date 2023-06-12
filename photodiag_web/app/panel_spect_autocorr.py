@@ -8,22 +8,20 @@ from bokeh.models import ColumnDataSource, Select, Spacer, Spinner, TabPanel, To
 from bokeh.plotting import curdoc, figure
 from lmfit.models import GaussianModel
 
-model = GaussianModel(prefix="p1_") + GaussianModel(prefix="p2_") + GaussianModel(prefix="p3_")
-params = model.make_params()
-
-model.set_param_hint("p1_center", value=0, vary=False)
-params["p1_sigma"].set(value=9, min=8, max=11)
-model.set_param_hint("p2_center", value=0, vary=False)
-params["p2_sigma"].set(value=5, min=4, max=7)
-model.set_param_hint("p3_center", value=0, vary=False)
-params["p3_sigma"].set(value=0.3, min=0.05, max=1.5)
+model = GaussianModel(prefix="bkg_") + GaussianModel(prefix="env_") + GaussianModel(prefix="spike_")
+params = model.make_params(
+    bkg_sigma=dict(value=9, min=8, max=11),
+    bkg_center=dict(value=0, vary=False),
+    env_sigma=dict(value=5, min=4, max=7),
+    env_center=dict(value=0, vary=False),
+    spike_sigma=dict(value=0.3, min=0.05, max=1.5),
+    spike_center=dict(value=0, vary=False),
+)
 
 
 def create(title, devices):
     doc = curdoc()
     log = doc.logger
-
-    device_name = ""
 
     pvs_x = {}
     pvs_y = {}
@@ -84,6 +82,7 @@ def create(title, devices):
     def update_x(value, **_):
         nonlocal lags
         lags = value - value[int(value.size / 2)]
+        buffer_num_peaks.clear()
 
     def update_y(value, **_):
         buffer_num_peaks.append(value)
@@ -97,8 +96,8 @@ def create(title, devices):
 
     def update_toggle_callback(_attr, _old, new):
         nonlocal update_plots_periodic_callback, lags, buffer_num_peaks
-        pv_x = pvs_x[device_name]
-        pv_y = pvs_y[device_name]
+        pv_x = pvs_x[device_select.value]
+        pv_y = pvs_y[device_select.value]
         if new:
             value = pv_x.value
             lags = value - value[int(value.size / 2)]
@@ -108,7 +107,7 @@ def create(title, devices):
             pv_x.add_callback(update_x)
             pv_y.add_callback(update_y)
 
-            update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 1000)
+            update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 3000)
 
             device_select.disabled = True
             num_shots_spinner.disabled = True
@@ -149,18 +148,17 @@ def create(title, devices):
         y_autocorr /= np.max(y_autocorr)
 
         result = model.fit(y_autocorr, params, x=lags)
-        sigmas = [result.values["p1_sigma"], result.values["p2_sigma"], result.values["p3_sigma"]]
-        sigma_spike, sigma_env, sigma_bkg = sorted(sigmas)
-        components = result.eval_components(x=lags)
-
         y_fit = result.best_fit
-        for model_name, model_value in components.items():
-            if model_name == "p1_":
-                y_bkg = model_value
-            if model_name == "p2_":
-                y_env = model_value
-            if model_name == "p3_":
-                y_spike = model_value
+
+        components = result.eval_components(x=lags)
+        y_bkg = components["bkg_"]
+        y_env = components["env_"]
+        y_spike = components["spike_"]
+
+        # Convert sigma of autocorrelation to sigma of corresponding gaussian
+        sigma_bkg = result.values["bkg_sigma"] / 1.4
+        sigma_env = result.values["env_sigma"] / 1.4
+        sigma_spike = result.values["spike_sigma"] / 1.4
 
         # update glyph sources
         autocorr_lines_source.data.update(
@@ -175,10 +173,8 @@ def create(title, devices):
             )
         )
 
-    def device_select_callback(_attr, _old, new):
-        nonlocal device_name, lags
-        device_name = new
-
+    def device_select_callback(_attr, _old, _new):
+        nonlocal lags
         # reset figures
         lags = []
         buffer_num_peaks.clear()
