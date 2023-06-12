@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 from functools import partial
 from threading import Thread
@@ -12,65 +11,12 @@ from cam_server_client import PipelineClient
 from scipy.optimize import curve_fit
 from uncertainties import unumpy
 
-from photodiag_web import DEVICES, push_elog
+from photodiag_web import DEVICES, epics_collect_data, push_elog
 
 scan_x_range = np.linspace(-0.3, 0.3, 3)
 scan_y_range = np.linspace(-0.3, 0.3, 3)
 
 client = PipelineClient()
-
-
-def make_arrays(pvs, n_pulses):
-    arrays = []
-    for pv in pvs:
-        val = pv.value
-
-        dtype = get_dtype(val)
-        shape = get_shape(val)
-        shape = (n_pulses,) + shape
-
-        arr = np.empty(shape, dtype)
-        arrays.append(arr)
-
-    return arrays
-
-
-def PBPS_get_data(channels, n_pulses=100, wait_time=0.5):
-    pvs = [epics.PV(ch) for ch in channels]
-    counters = np.zeros(len(channels), dtype=int)
-
-    arrays = make_arrays(pvs, n_pulses)
-
-    def on_value_change(pv=None, ichannel=None, value=None, **_):
-        ivalue = counters[ichannel]
-        arrays[ichannel][ivalue] = value
-
-        counters[ichannel] += 1
-
-        if counters[ichannel] == n_pulses:
-            pv.disconnect()
-
-    for i, pv in enumerate(pvs):
-        pv.add_callback(callback=on_value_change, pv=pv, ichannel=i)
-
-    while not np.all(counters == n_pulses):
-        time.sleep(wait_time)
-
-    return arrays
-
-
-def get_dtype(v):
-    if isinstance(v, np.ndarray):
-        return v.dtype
-    else:
-        return type(v)
-
-
-def get_shape(v):
-    if isinstance(v, np.ndarray):
-        return v.shape
-    else:
-        return tuple()
 
 
 def pv_scan(pv_name, scan_range, channels, numShots):
@@ -87,7 +33,7 @@ def pv_scan(pv_name, scan_range, channels, numShots):
                 raise ValueError(f"Motor position outside soft limits: {motor.LLM} {motor.HLM}")
             raise ValueError(f"Error moving the motor {pv_name}, error value {val}")
 
-        data = PBPS_get_data(channels, numShots)
+        data = epics_collect_data(channels, numShots)
         scan_mean.append([i.mean() for i in data])
         scan_std.append([i.std() for i in data])
         scan_all.append(data)
@@ -98,7 +44,7 @@ def pv_scan(pv_name, scan_range, channels, numShots):
 
 
 def PBPS_I_calibrate(channels, numShots):
-    data = PBPS_get_data(channels, numShots)
+    data = epics_collect_data(channels, numShots)
     scan_mean = np.array([i.mean() for i in data])
     scan_std = np.array([i.std() for i in data])
     scan_all = np.array(data)

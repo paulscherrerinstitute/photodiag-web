@@ -1,7 +1,10 @@
 import os
 import tempfile
+import time
 
 import elog
+import epics
+import numpy as np
 import urllib3
 from bokeh.io import export_png
 
@@ -17,6 +20,45 @@ DEVICES = [
     "SAROP31-PBPS113",
     "SAROP31-PBPS149",
 ]
+
+
+def _make_arrays(pvs, n_pulses):
+    arrays = []
+    for pv in pvs:
+        val = pv.value
+
+        dtype = val.dtype if isinstance(val, np.ndarray) else type(val)
+        shape = val.shape if isinstance(val, np.ndarray) else tuple()
+        shape = (n_pulses,) + shape
+
+        arr = np.empty(shape, dtype)
+        arrays.append(arr)
+
+    return arrays
+
+
+def epics_collect_data(channels, n_pulses=100, wait_time=0.5):
+    pvs = [epics.PV(ch) for ch in channels]
+    counters = np.zeros(len(channels), dtype=int)
+
+    arrays = _make_arrays(pvs, n_pulses)
+
+    def on_value_change(pv=None, ichannel=None, value=None, **_):
+        ivalue = counters[ichannel]
+        arrays[ichannel][ivalue] = value
+
+        counters[ichannel] += 1
+
+        if counters[ichannel] == n_pulses:
+            pv.disconnect()
+
+    for i, pv in enumerate(pvs):
+        pv.add_callback(callback=on_value_change, pv=pv, ichannel=i)
+
+    while not np.all(counters == n_pulses):
+        time.sleep(wait_time)
+
+    return arrays
 
 
 def push_elog(figures, message, attributes):
