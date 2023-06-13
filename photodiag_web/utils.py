@@ -89,3 +89,13 @@ def push_elog(figures, message, attributes):
         )
 
     return msg_id
+
+
+def get_device_domain(device_name):
+    if device_name[1:3] == "AR":
+        domain = "ARAMIS"
+    elif device_name[1:3] == "AT":
+        domain = "ATHOS"
+    else:
+        domain = ""
+    return domain

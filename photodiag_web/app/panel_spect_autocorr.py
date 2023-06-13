@@ -20,7 +20,7 @@ from bokeh.models import (
 from bokeh.plotting import curdoc, figure
 from lmfit.models import GaussianModel
 
-from photodiag_web import epics_collect_data
+from photodiag_web import epics_collect_data, get_device_domain, push_elog
 
 model = GaussianModel(prefix="bkg_") + GaussianModel(prefix="env_") + GaussianModel(prefix="spike_")
 params = model.make_params(
@@ -73,6 +73,8 @@ def pv_scan(pv_name, scan_range, channels, numShots):
 def create(title):
     doc = curdoc()
     log = doc.logger
+
+    fit_result = None
 
     with open("config.json") as f:
         config = json.load(f)
@@ -221,6 +223,8 @@ def create(title):
         step_spinner.disabled = True
         pos_spinner.disabled = True
         calibrate_button.disabled = True
+        push_fit_elog_button.disabled = True
+        push_calib_elog_button.disabled = True
 
     async def _unlock_gui():
         device_select.disabled = False
@@ -230,6 +234,8 @@ def create(title):
         step_spinner.disabled = False
         pos_spinner.disabled = False
         calibrate_button.disabled = False
+        push_fit_elog_button.disabled = False
+        push_calib_elog_button.disabled = False
 
     async def _update_calib_plot(x, wfs):
         pv_x = pvs_x[device_select.value]
@@ -278,6 +284,7 @@ def create(title):
     calibrate_button.on_click(calibrate_button_callback)
 
     async def _update_plots():
+        nonlocal fit_result
         if len(buffer_num_peaks) < 4:
             autocorr_lines_source.data.update(
                 x=[], y_autocorr=[], y_fit=[], y_bkg=[], y_env=[], y_spike=[]
@@ -289,18 +296,18 @@ def create(title):
         y_autocorr = num_peaks.mean(axis=0)
         y_autocorr /= np.max(y_autocorr)
 
-        result = model.fit(y_autocorr, params, x=lags)
-        y_fit = result.best_fit
+        fit_result = model.fit(y_autocorr, params, x=lags)
+        y_fit = fit_result.best_fit
 
-        components = result.eval_components(x=lags)
+        components = fit_result.eval_components(x=lags)
         y_bkg = components["bkg_"]
         y_env = components["env_"]
         y_spike = components["spike_"]
 
         # Convert sigma of autocorrelation to sigma of corresponding gaussian
-        sigma_bkg = result.values["bkg_sigma"] / 1.4
-        sigma_env = result.values["env_sigma"] / 1.4
-        sigma_spike = result.values["spike_sigma"] / 1.4
+        sigma_bkg = fit_result.values["bkg_sigma"] / 1.4
+        sigma_env = fit_result.values["env_sigma"] / 1.4
+        sigma_spike = fit_result.values["spike_sigma"] / 1.4
 
         # update glyph sources
         autocorr_lines_source.data.update(
@@ -341,13 +348,71 @@ def create(title):
     device_select.on_change("value", device_select_callback)
     device_select.value = devices[0]
 
-    fig_layout = row(column(autocorr_fig, sigma_fig), calib_fig)
+    def push_fit_elog_button_callback():
+        device_name = device_select.value
+        domain = get_device_domain(device_name)
+
+        msg_id = push_elog(
+            figures=((autocorr_layout, "fit.png"),),
+            message=fit_result.fit_report(),
+            attributes={
+                "Author": "sf-photodiag",
+                "Entry": "Info",
+                "Domain": domain,
+                "System": "Diagnostics",
+                "Title": f"{device_name} fit",
+            },
+        )
+        log.info(
+            f"Logbook entry created for {device_name}: "
+            f"https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}"
+        )
+
+    push_fit_elog_button = Button(label="Push fit elog")
+    push_fit_elog_button.on_click(push_fit_elog_button_callback)
+
+    def push_calib_elog_button_callback():
+        device_name = device_select.value
+        domain = get_device_domain(device_name)
+
+        msg_id = push_elog(
+            figures=((calib_layout, "calibration.png"),),
+            message="",
+            attributes={
+                "Author": "sf-photodiag",
+                "Entry": "Configuration",
+                "Domain": domain,
+                "System": "Diagnostics",
+                "Title": f"{device_name} resolution",
+            },
+        )
+        log.info(
+            f"Logbook entry created for {device_name} callibration: "
+            f"https://elog-gfa.psi.ch/SF-Photonics-Data/{msg_id}"
+        )
+
+    push_calib_elog_button = Button(label="Push calib elog")
+    push_calib_elog_button.on_click(push_calib_elog_button_callback)
+
+    autocorr_layout = column(autocorr_fig, sigma_fig)
+    calib_layout = calib_fig
+    fig_layout = row(autocorr_layout, calib_layout)
     tab_layout = column(
         fig_layout,
         row(
             device_select,
             num_shots_spinner,
-            column(Spacer(height=18), row(update_toggle, calibrate_button)),
+            column(
+                Spacer(height=18),
+                row(
+                    Spacer(width=30),
+                    update_toggle,
+                    push_fit_elog_button,
+                    Spacer(width=30),
+                    calibrate_button,
+                    push_calib_elog_button,
+                ),
+            ),
         ),
         row(motor_textinput, pos_spinner, from_spinner, to_spinner, step_spinner),
     )
