@@ -147,15 +147,15 @@ def create(title):
     calib_fig.line(source=calib_line_source)
 
     lags = []
-    buffer_num_peaks = deque()
+    buffer_autocorr = deque()
 
     def update_x(value, **_):
         nonlocal lags
         lags = value - value[int(value.size / 2)]
-        buffer_num_peaks.clear()
+        buffer_autocorr.clear()
 
     def update_y(value, **_):
-        buffer_num_peaks.append(value)
+        buffer_autocorr.append(np.correlate(value, value, mode="same"))
 
     num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
     from_spinner = Spinner(title="From:")
@@ -182,14 +182,13 @@ def create(title):
     update_plots_periodic_callback = None
 
     def update_toggle_callback(_attr, _old, new):
-        nonlocal update_plots_periodic_callback, lags, buffer_num_peaks
+        nonlocal update_plots_periodic_callback, lags, buffer_autocorr
         pv_x = pvs_x[device_select.value]
         pv_y = pvs_y[device_select.value]
         if new:
             value = pv_x.value
             lags = value - value[int(value.size / 2)]
-            buffer_num_peaks = deque(maxlen=num_shots_spinner.value)
-            buffer_num_peaks.append(pv_y.value)
+            buffer_autocorr = deque(maxlen=num_shots_spinner.value)
 
             pv_x.add_callback(update_x)
             pv_y.add_callback(update_y)
@@ -247,7 +246,8 @@ def create(title):
 
         sigma_spike = []
         for wf in wfs:
-            result = model.fit(wf, params, x=lags)
+            autocorr = np.correlate(wf, wf, mode="same")
+            result = model.fit(autocorr, params, x=lags)
             sigma_spike.append(result.values["spike_sigma"] / 1.4)
         calib_line_source.data.update(x=x, y=sigma_spike)
 
@@ -292,15 +292,15 @@ def create(title):
 
     async def _update_plots():
         nonlocal fit_result
-        if len(buffer_num_peaks) < 4:
+        if len(buffer_autocorr) < 4:
             autocorr_lines_source.data.update(
                 x=[], y_autocorr=[], y_fit=[], y_bkg=[], y_env=[], y_spike=[]
             )
             sigma_lines_source.data.update(x=[], sigma_bkg=[], sigma_env=[], sigma_spike=[])
             return
 
-        num_peaks = np.array(buffer_num_peaks)
-        y_autocorr = num_peaks.mean(axis=0)
+        autocorr = np.array(buffer_autocorr)
+        y_autocorr = autocorr.mean(axis=0)
         y_autocorr /= np.max(y_autocorr)
 
         fit_result = model.fit(y_autocorr, params, x=lags)
@@ -333,7 +333,7 @@ def create(title):
         nonlocal lags
         # reset figures
         lags = []
-        buffer_num_peaks.clear()
+        buffer_autocorr.clear()
         doc.add_next_tick_callback(_update_plots)
         doc.add_next_tick_callback(partial(_update_calib_plot, x=[], wfs=[]))
 
