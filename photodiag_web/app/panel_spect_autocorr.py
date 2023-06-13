@@ -25,10 +25,13 @@ model = GaussianModel(prefix="bkg_") + GaussianModel(prefix="env_") + GaussianMo
 params = model.make_params(
     bkg_sigma=dict(value=9, min=8, max=11),
     bkg_center=dict(value=0, vary=False),
-    env_sigma=dict(value=5, min=4, max=7),
+    bkg_amplitude=dict(value=1, min=0),
+    env_sigma=dict(value=5, min=1, max=7),
     env_center=dict(value=0, vary=False),
+    env_amplitude=dict(value=1, min=0),
     spike_sigma=dict(value=0.3, min=0.05, max=1.5),
     spike_center=dict(value=0, vary=False),
+    spike_amplitude=dict(value=1, min=0),
 )
 
 
