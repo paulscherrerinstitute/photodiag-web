@@ -51,10 +51,7 @@ spectral_tabs = Tabs(
         panel_spect_peaks.create(
             "Athos Spectral peaks analysis", ["SATOP21-PMOS127-2D", "SATOP31-PMOS132-2D"]
         ),
-        panel_spect_autocorr.create(
-            "Aramis/Athos Spectral autocorrelation",
-            ["SARFE10-PSSS059", "SATOP21-PMOS127-2D", "SATOP31-PMOS132-2D"],
-        ),
+        panel_spect_autocorr.create("Aramis/Athos Spectral autocorrelation"),
     ]
 )
 spectral_panel = TabPanel(child=column(spectral_img, spectral_tabs), title="Spectral")
