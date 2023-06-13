@@ -91,7 +91,6 @@ def create(title):
     autocorr_fig = figure(
         height=250, width=1000, x_axis_label="Lags [eV]", tools="pan,wheel_zoom,save,reset"
     )
-    autocorr_fig.toolbar.logo = None
 
     autocorr_lines_source = ColumnDataSource(
         dict(x=[], y_autocorr=[], y_fit=[], y_bkg=[], y_env=[], y_spike=[])
@@ -113,11 +112,14 @@ def create(title):
         legend_label="Spectral spike",
     )
 
+    autocorr_fig.toolbar.logo = None
+    autocorr_fig.legend.click_policy = "hide"
+    autocorr_fig.y_range.only_visible = True
+
     # sigma over time figure
     sigma_fig = figure(
         height=250, width=1000, x_axis_type="datetime", tools="pan,wheel_zoom,save,reset"
     )
-    sigma_fig.toolbar.logo = None
 
     sigma_lines_source = ColumnDataSource(dict(x=[], sigma_bkg=[], sigma_env=[], sigma_spike=[]))
     sigma_fig.line(
@@ -133,6 +135,10 @@ def create(title):
         legend_label="Spectral spike",
     )
 
+    sigma_fig.toolbar.logo = None
+    sigma_fig.legend.click_policy = "hide"
+    sigma_fig.y_range.only_visible = True
+
     # calibration figure
     calib_fig = figure(
         height=500,
@@ -141,10 +147,11 @@ def create(title):
         y_axis_label="Spectral spike sigma [eV]",
         tools="pan,wheel_zoom,save,reset",
     )
-    calib_fig.toolbar.logo = None
 
     calib_line_source = ColumnDataSource(dict(x=[], y=[]))
     calib_fig.line(source=calib_line_source)
+
+    calib_fig.toolbar.logo = None
 
     lags = []
     buffer_autocorr = deque()
