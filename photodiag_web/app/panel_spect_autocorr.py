@@ -1,4 +1,3 @@
-import json
 from collections import deque
 from datetime import datetime
 from functools import partial
@@ -20,7 +19,7 @@ from bokeh.models import (
 from bokeh.plotting import curdoc, figure
 from lmfit.models import GaussianModel
 
-from photodiag_web import epics_collect_data, get_device_domain, push_elog
+from photodiag_web import SPECT_DEV_CONFIG, epics_collect_data, get_device_domain, push_elog
 
 model = GaussianModel(prefix="bkg_") + GaussianModel(prefix="env_") + GaussianModel(prefix="spike_")
 params = model.make_params(
@@ -76,9 +75,7 @@ def create(title):
 
     fit_result = None
 
-    with open("config.json") as f:
-        config = json.load(f)
-
+    config = SPECT_DEV_CONFIG
     devices = list(config.keys())
 
     pvs_x = {}
