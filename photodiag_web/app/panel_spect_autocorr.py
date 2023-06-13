@@ -17,11 +17,16 @@ from bokeh.models import (
     Toggle,
 )
 from bokeh.plotting import curdoc, figure
-from lmfit.models import GaussianModel
+from lmfit.models import ConstantModel, GaussianModel
 
 from photodiag_web import SPECT_DEV_CONFIG, epics_collect_data, get_device_domain, push_elog
 
-model = GaussianModel(prefix="bkg_") + GaussianModel(prefix="env_") + GaussianModel(prefix="spike_")
+model = (
+    GaussianModel(prefix="bkg_")
+    + ConstantModel(prefix="const_")
+    + GaussianModel(prefix="env_")
+    + GaussianModel(prefix="spike_")
+)
 params = model.make_params(
     bkg_sigma=dict(value=9, min=8, max=11),
     bkg_center=dict(value=0, vary=False),
@@ -32,6 +37,7 @@ params = model.make_params(
     spike_sigma=dict(value=0.3, min=0.05, max=1.5),
     spike_center=dict(value=0, vary=False),
     spike_amplitude=dict(value=1, min=0),
+    const_c=dict(value=0, min=0),
 )
 
 
@@ -96,7 +102,7 @@ def create(title):
     )
 
     autocorr_lines_source = ColumnDataSource(
-        dict(x=[], y_autocorr=[], y_fit=[], y_bkg=[], y_env=[], y_spike=[])
+        dict(x=[], y_autocorr=[], y_fit=[], y_bkg=[], y_const=[], y_env=[], y_spike=[])
     )
     autocorr_fig.line(source=autocorr_lines_source, y="y_autocorr", legend_label="Autocorrelation")
     autocorr_fig.line(
@@ -104,6 +110,9 @@ def create(title):
     )
     autocorr_fig.line(
         source=autocorr_lines_source, y="y_bkg", line_color="green", legend_label="Background"
+    )
+    autocorr_fig.line(
+        source=autocorr_lines_source, y="y_const", line_color="green", legend_label="Background"
     )
     autocorr_fig.line(
         source=autocorr_lines_source, y="y_env", line_color="red", legend_label="Spectral envelope"
@@ -304,7 +313,7 @@ def create(title):
         nonlocal fit_result
         if len(buffer_autocorr) < 4:
             autocorr_lines_source.data.update(
-                x=[], y_autocorr=[], y_fit=[], y_bkg=[], y_env=[], y_spike=[]
+                x=[], y_autocorr=[], y_fit=[], y_bkg=[], y_const=[], y_env=[], y_spike=[]
             )
             sigma_lines_source.data.update(x=[], sigma_bkg=[], sigma_env=[], sigma_spike=[])
             return
@@ -318,6 +327,7 @@ def create(title):
 
         components = fit_result.eval_components(x=lags)
         y_bkg = components["bkg_"]
+        y_const = components["const_"]
         y_env = components["env_"]
         y_spike = components["spike_"]
 
@@ -328,7 +338,13 @@ def create(title):
 
         # update glyph sources
         autocorr_lines_source.data.update(
-            x=lags, y_autocorr=y_autocorr, y_fit=y_fit, y_bkg=y_bkg, y_env=y_env, y_spike=y_spike
+            x=lags,
+            y_autocorr=y_autocorr,
+            y_fit=y_fit,
+            y_bkg=y_bkg,
+            y_const=y_const,
+            y_env=y_env,
+            y_spike=y_spike,
         )
         sigma_lines_source.stream(
             dict(
