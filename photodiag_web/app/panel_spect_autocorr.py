@@ -237,6 +237,12 @@ def create(title):
         push_fit_elog_button.disabled = False
         push_calib_elog_button.disabled = False
 
+    async def _lock_update():
+        update_toggle.disabled = True
+
+    async def _unlock_update():
+        update_toggle.disabled = False
+
     async def _update_calib_plot(x, wfs):
         pv_x = pvs_x[device_select.value]
         value = pv_x.value
@@ -267,15 +273,19 @@ def create(title):
         except ValueError as e:
             log.error(e)
             doc.add_next_tick_callback(_unlock_gui)
+            doc.add_next_tick_callback(_unlock_update)
             return
         else:
             log.info(f"{device_name} calibrated")
 
         doc.add_next_tick_callback(partial(_update_calib_plot, x=scan_range, wfs=wf_mean))
         doc.add_next_tick_callback(_unlock_gui)
+        doc.add_next_tick_callback(_unlock_update)
 
     def calibrate_button_callback():
         doc.add_next_tick_callback(_lock_gui)
+        # extra lock update button
+        doc.add_next_tick_callback(_lock_update)
 
         thread = Thread(target=_calibrate)
         thread.start()
