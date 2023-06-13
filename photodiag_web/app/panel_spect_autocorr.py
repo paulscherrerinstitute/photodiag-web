@@ -128,35 +128,37 @@ def create(title):
     autocorr_fig.legend.click_policy = "hide"
     autocorr_fig.y_range.only_visible = True
 
-    # sigma over time figure
-    sigma_fig = figure(
-        height=250, width=1000, x_axis_type="datetime", tools="pan,wheel_zoom,save,reset"
+    # fwhm over time figure
+    fwhm_fig = figure(
+        height=250,
+        width=1000,
+        x_axis_label="Wall time",
+        x_axis_type="datetime",
+        y_axis_label="FWHM [eV]",
+        tools="pan,wheel_zoom,save,reset",
     )
 
-    sigma_lines_source = ColumnDataSource(dict(x=[], sigma_bkg=[], sigma_env=[], sigma_spike=[]))
-    sigma_fig.line(
-        source=sigma_lines_source, y="sigma_bkg", line_color="green", legend_label="Background"
+    fwhm_lines_source = ColumnDataSource(dict(x=[], fwhm_bkg=[], fwhm_env=[], fwhm_spike=[]))
+    fwhm_fig.line(
+        source=fwhm_lines_source, y="fwhm_bkg", line_color="green", legend_label="Background"
     )
-    sigma_fig.line(
-        source=sigma_lines_source, y="sigma_env", line_color="red", legend_label="Spectral envelope"
+    fwhm_fig.line(
+        source=fwhm_lines_source, y="fwhm_env", line_color="red", legend_label="Spectral envelope"
     )
-    sigma_fig.line(
-        source=sigma_lines_source,
-        y="sigma_spike",
-        line_color="purple",
-        legend_label="Spectral spike",
+    fwhm_fig.line(
+        source=fwhm_lines_source, y="fwhm_spike", line_color="purple", legend_label="Spectral spike"
     )
 
-    sigma_fig.toolbar.logo = None
-    sigma_fig.legend.click_policy = "hide"
-    sigma_fig.y_range.only_visible = True
+    fwhm_fig.toolbar.logo = None
+    fwhm_fig.legend.click_policy = "hide"
+    fwhm_fig.y_range.only_visible = True
 
     # calibration figure
     calib_fig = figure(
         height=500,
         width=500,
         x_axis_label="Position",
-        y_axis_label="Spectral spike sigma [eV]",
+        y_axis_label="Spectral spike FWHM [eV]",
         tools="pan,wheel_zoom,save,reset",
     )
 
@@ -263,12 +265,12 @@ def create(title):
         value = pv_x.value
         lags = value - value[int(value.size / 2)]
 
-        sigma_spike = []
+        fwhm_spike = []
         for wf in wfs:
             autocorr = np.correlate(wf, wf, mode="same")
             result = model.fit(autocorr, params, x=lags)
-            sigma_spike.append(result.values["spike_sigma"] / 1.4)
-        calib_line_source.data.update(x=x, y=sigma_spike)
+            fwhm_spike.append(result.values["spike_fwhm"] / 1.4)
+        calib_line_source.data.update(x=x, y=fwhm_spike)
 
     def _calibrate():
         device_name = device_select.value
@@ -315,7 +317,7 @@ def create(title):
             autocorr_lines_source.data.update(
                 x=[], y_autocorr=[], y_fit=[], y_bkg=[], y_const=[], y_env=[], y_spike=[]
             )
-            sigma_lines_source.data.update(x=[], sigma_bkg=[], sigma_env=[], sigma_spike=[])
+            fwhm_lines_source.data.update(x=[], fwhm_bkg=[], fwhm_env=[], fwhm_spike=[])
             return
 
         autocorr = np.array(buffer_autocorr)
@@ -331,10 +333,10 @@ def create(title):
         y_env = components["env_"]
         y_spike = components["spike_"]
 
-        # Convert sigma of autocorrelation to sigma of corresponding gaussian
-        sigma_bkg = fit_result.values["bkg_sigma"] / 1.4
-        sigma_env = fit_result.values["env_sigma"] / 1.4
-        sigma_spike = fit_result.values["spike_sigma"] / 1.4
+        # Convert sigma of autocorrelation to fwhm of corresponding gaussian
+        fwhm_bkg = fit_result.values["bkg_fwhm"] / 1.4
+        fwhm_env = fit_result.values["env_fwhm"] / 1.4
+        fwhm_spike = fit_result.values["spike_fwhm"] / 1.4
 
         # update glyph sources
         autocorr_lines_source.data.update(
@@ -346,12 +348,12 @@ def create(title):
             y_env=y_env,
             y_spike=y_spike,
         )
-        sigma_lines_source.stream(
+        fwhm_lines_source.stream(
             dict(
                 x=[datetime.now()],
-                sigma_bkg=[sigma_bkg],
-                sigma_env=[sigma_env],
-                sigma_spike=[sigma_spike],
+                fwhm_bkg=[fwhm_bkg],
+                fwhm_env=[fwhm_env],
+                fwhm_spike=[fwhm_spike],
             )
         )
 
@@ -427,7 +429,7 @@ def create(title):
     push_calib_elog_button = Button(label="Push calib elog")
     push_calib_elog_button.on_click(push_calib_elog_button_callback)
 
-    autocorr_layout = column(autocorr_fig, sigma_fig)
+    autocorr_layout = column(autocorr_fig, fwhm_fig)
     calib_layout = calib_fig
     fig_layout = row(autocorr_layout, calib_layout)
     tab_layout = column(
