@@ -55,7 +55,12 @@ def motor_scan(pv_name, scan_range, channels, numShots):
             raise ValueError(f"Error moving the motor {pv_name}, error value {val}")
 
         data = epics_collect_data(channels, numShots)
-        scan_mean.append([i.mean(axis=0) for i in data])
+
+        autocorr = []
+        for wf in data[0]:
+            autocorr.append(np.correlate(wf, wf, mode="same"))
+        autocorr_mean = np.mean(autocorr, axis=0)
+        scan_mean.append(autocorr_mean / np.max(autocorr_mean))
 
     motor.move(motor_init, wait=True)
 
@@ -71,7 +76,12 @@ def pv_scan(pv_name, scan_range, channels, numShots):
         pv.put(pos, wait=True)
 
         data = epics_collect_data(channels, numShots)
-        scan_mean.append([i.mean(axis=0) for i in data])
+
+        autocorr = []
+        for wf in data[0]:
+            autocorr.append(np.correlate(wf, wf, mode="same"))
+        autocorr_mean = np.mean(autocorr, axis=0)
+        scan_mean.append(autocorr_mean / np.max(autocorr_mean))
 
     pv.put(pv_init, wait=True)
 
@@ -267,10 +277,9 @@ def create(title):
 
         fwhm_spike = []
         for wf in wfs:
-            wf = wf.ravel()
-            autocorr = np.correlate(wf, wf, mode="same")
-            result = model.fit(autocorr, params, x=lags)
-            fwhm_spike.append(result.values["spike_fwhm"] / 1.4)
+            fit_result = model.fit(wf, params, x=lags)
+            fwhm_spike.append(fit_result.values["spike_fwhm"] / 1.4)
+
         calib_line_source.data.update(x=x, y=fwhm_spike)
 
     def _calibrate():
