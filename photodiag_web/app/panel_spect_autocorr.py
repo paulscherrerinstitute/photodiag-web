@@ -364,7 +364,8 @@ def create(title):
                 fwhm_bkg=[fwhm_bkg],
                 fwhm_env=[fwhm_env],
                 fwhm_spike=[fwhm_spike],
-            )
+            ),
+            rollover=3600,
         )
 
     def device_select_callback(_attr, _old, new):
