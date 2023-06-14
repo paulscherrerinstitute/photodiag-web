@@ -267,6 +267,7 @@ def create(title):
 
         fwhm_spike = []
         for wf in wfs:
+            wf = wf.ravel()
             autocorr = np.correlate(wf, wf, mode="same")
             result = model.fit(autocorr, params, x=lags)
             fwhm_spike.append(result.values["spike_fwhm"] / 1.4)
