@@ -1,3 +1,4 @@
+import asyncio
 from collections import deque
 from datetime import datetime
 from functools import partial
@@ -22,17 +23,9 @@ from lmfit.models import GaussianModel
 from photodiag_web import SPECT_DEV_CONFIG, epics_collect_data, get_device_domain, push_elog
 
 model = GaussianModel(prefix="bkg_") + GaussianModel(prefix="env_") + GaussianModel(prefix="spike_")
-params = model.make_params(
-    bkg_sigma=dict(value=12, min=10, max=20),
-    bkg_center=dict(value=0, vary=False),
-    bkg_amplitude=dict(value=1, min=0),
-    env_sigma=dict(value=6, min=2, max=9),
-    env_center=dict(value=0, vary=False),
-    env_amplitude=dict(value=1, min=0),
-    spike_sigma=dict(value=0.4, min=0.05, max=1.5),
-    spike_center=dict(value=0, vary=False),
-    spike_amplitude=dict(value=1, min=0),
-)
+
+
+FWHM_TO_SIGMA = 1 / (2 * np.sqrt(2 * np.log(2)))  # ~= 1 / 2.355
 
 
 def motor_scan(pv_name, scan_range, channels, numShots):
@@ -87,6 +80,33 @@ def create(title):
     log = doc.logger
 
     fit_result = None
+    params = model.make_params(
+        bkg_sigma=dict(value=12, min=0.05),
+        bkg_center=dict(value=0, vary=False),
+        bkg_amplitude=dict(value=1, min=0),
+        env_sigma=dict(value=6, min=0.05),
+        env_center=dict(value=0, vary=False),
+        env_amplitude=dict(value=1, min=0),
+        spike_sigma=dict(value=1.4 * FWHM_TO_SIGMA, min=0.05),
+        spike_center=dict(value=0, vary=False),
+        spike_amplitude=dict(value=1, min=0),
+    )
+
+    async def _update_fit_params():
+        device = device_select.value
+        if not device:
+            return
+
+        vals = []
+        # TODO: remove after channel names are fixed for all devices
+        tmp = epics.caget(f"{device}:FIT-FWHM")
+        chan = f"{device}:SPECTRUM_FWHM" if tmp is None else f"{device}:FIT-FWHM"
+        for _ in range(20):
+            vals.append(epics.caget(chan))
+            await asyncio.sleep(0.1)
+        params["env_sigma"].value = np.mean(vals) * 1.4 * FWHM_TO_SIGMA
+
+    doc.add_periodic_callback(_update_fit_params, 600_000)
 
     config = SPECT_DEV_CONFIG
     devices = list(config.keys())
@@ -174,6 +194,8 @@ def create(title):
     def update_x(value, **_):
         nonlocal lags
         lags = value - value[int(value.size / 2)]
+        params["bkg_sigma"].value = (value[-1] - value[0]) * 0.4 * 1.4 * FWHM_TO_SIGMA
+
         buffer_autocorr.clear()
 
     def update_y(value, **_):
@@ -210,6 +232,7 @@ def create(title):
         if new:
             value = pv_x.value
             lags = value - value[int(value.size / 2)]
+            params["bkg_sigma"].value = (value[-1] - value[0]) * 0.4 * 1.4 * FWHM_TO_SIGMA
             buffer_autocorr = deque(maxlen=num_shots_spinner.value)
 
             pv_x.add_callback(update_x)
