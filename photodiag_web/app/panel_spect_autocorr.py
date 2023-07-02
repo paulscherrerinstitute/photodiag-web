@@ -22,7 +22,7 @@ from lmfit.models import GaussianModel
 
 from photodiag_web import SPECT_DEV_CONFIG, epics_collect_data, get_device_domain, push_elog
 
-model = GaussianModel(prefix="bkg_") + GaussianModel(prefix="env_") + GaussianModel(prefix="spike_")
+model = GaussianModel(prefix="g0_") + GaussianModel(prefix="g1_") + GaussianModel(prefix="g2_")
 
 
 FWHM_TO_SIGMA = 1 / (2 * np.sqrt(2 * np.log(2)))  # ~= 1 / 2.355
@@ -81,15 +81,15 @@ def create(title):
 
     fit_result = None
     params = model.make_params(
-        bkg_sigma=dict(value=12, min=0.05),
-        bkg_center=dict(value=0, vary=False),
-        bkg_amplitude=dict(value=1, min=0),
-        env_sigma=dict(value=6, min=0.05),
-        env_center=dict(value=0, vary=False),
-        env_amplitude=dict(value=1, min=0),
-        spike_sigma=dict(value=1.4 * FWHM_TO_SIGMA, min=0.05),
-        spike_center=dict(value=0, vary=False),
-        spike_amplitude=dict(value=1, min=0),
+        g0_sigma=dict(value=12, min=0.05),
+        g0_center=dict(value=0, vary=False),
+        g0_amplitude=dict(value=1, min=0),
+        g1_sigma=dict(value=6, min=0.05),
+        g1_center=dict(value=0, vary=False),
+        g1_amplitude=dict(value=1, min=0),
+        g2_sigma=dict(value=1.4 * FWHM_TO_SIGMA, min=0.05),
+        g2_center=dict(value=0, vary=False),
+        g2_amplitude=dict(value=1, min=0),
     )
 
     async def _update_fit_params():
@@ -104,7 +104,7 @@ def create(title):
         for _ in range(20):
             vals.append(epics.caget(chan))
             await asyncio.sleep(0.1)
-        params["env_sigma"].value = np.mean(vals) * 1.4 * FWHM_TO_SIGMA
+        params["g1_sigma"].value = np.mean(vals) * 1.4 * FWHM_TO_SIGMA
 
     doc.add_periodic_callback(_update_fit_params, 600_000)
 
@@ -194,7 +194,7 @@ def create(title):
     def update_x(value, **_):
         nonlocal lags
         lags = value - value[int(value.size / 2)]
-        params["bkg_sigma"].value = (value[-1] - value[0]) * 0.4 * 1.4 * FWHM_TO_SIGMA
+        params["g0_sigma"].value = (value[-1] - value[0]) * 0.4 * 1.4 * FWHM_TO_SIGMA
 
         buffer_autocorr.clear()
 
@@ -232,7 +232,7 @@ def create(title):
         if new:
             value = pv_x.value
             lags = value - value[int(value.size / 2)]
-            params["bkg_sigma"].value = (value[-1] - value[0]) * 0.4 * 1.4 * FWHM_TO_SIGMA
+            params["g0_sigma"].value = (value[-1] - value[0]) * 0.4 * 1.4 * FWHM_TO_SIGMA
             buffer_autocorr = deque(maxlen=num_shots_spinner.value)
 
             pv_x.add_callback(update_x)
@@ -292,7 +292,12 @@ def create(title):
         fwhm_spike = []
         for wf in wfs:
             fit_result = model.fit(wf, params, x=lags)
-            fwhm_spike.append(fit_result.values["spike_fwhm"] / 1.4)
+            spike_fwhm = min(
+                fit_result.values["g0_fwhm"],
+                fit_result.values["g1_fwhm"],
+                fit_result.values["g2_fwhm"],
+            )
+            fwhm_spike.append(spike_fwhm / 1.4)
 
         calib_line_source.data.update(x=x, y=fwhm_spike)
 
@@ -351,15 +356,24 @@ def create(title):
         fit_result = model.fit(y_autocorr, params, x=lags)
         y_fit = fit_result.best_fit
 
-        components = fit_result.eval_components(x=lags)
-        y_bkg = components["bkg_"]
-        y_env = components["env_"]
-        y_spike = components["spike_"]
+        # Sort the fwhm values (sometimes they are swapped despite initial guesses)
+        fwhm = [
+            fit_result.values["g0_fwhm"],
+            fit_result.values["g1_fwhm"],
+            fit_result.values["g2_fwhm"],
+        ]
+        spike_ind, env_idx, bkg_idx = np.argsort(fwhm)
 
-        # Convert sigma of autocorrelation to fwhm of corresponding gaussian
-        fwhm_bkg = fit_result.values["bkg_fwhm"] / 1.4
-        fwhm_env = fit_result.values["env_fwhm"] / 1.4
-        fwhm_spike = fit_result.values["spike_fwhm"] / 1.4
+        components = fit_result.eval_components(x=lags)
+
+        y_bkg = components[f"g{bkg_idx}_"]
+        y_env = components[f"g{env_idx}_"]
+        y_spike = components[f"g{spike_ind}_"]
+
+        # Convert fwhm of autocorrelation to fwhm of corresponding gaussian
+        fwhm_bkg = fwhm[bkg_idx] / 1.4
+        fwhm_env = fwhm[env_idx] / 1.4
+        fwhm_spike = fwhm[spike_ind] / 1.4
 
         # update glyph sources
         autocorr_lines_source.data.update(
