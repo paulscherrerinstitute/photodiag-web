@@ -249,7 +249,7 @@ def create(title):
             pv_y.add_callback(update_y)
 
             update_plots_periodic_callback = doc.add_periodic_callback(_update_plots, 3000)
-            doc.add_next_tick_callback(_lock_gui)
+            doc.add_next_tick_callback(_live_lock_gui)
 
             update_toggle.label = "Stop"
             update_toggle.button_type = "success"
@@ -258,7 +258,7 @@ def create(title):
             pv_y.clear_callbacks()
 
             doc.remove_periodic_callback(update_plots_periodic_callback)
-            doc.add_next_tick_callback(_unlock_gui)
+            doc.add_next_tick_callback(_live_unlock_gui)
 
             update_toggle.label = "Update"
             update_toggle.button_type = "primary"
@@ -266,19 +266,23 @@ def create(title):
     update_toggle = Toggle(label="Update", button_type="primary")
     update_toggle.on_change("active", update_toggle_callback)
 
-    async def _lock_gui():
+    is_running = {"calib": False, "live": False}
+
+    async def _calib_lock_gui():
+        is_running["calib"] = True
         device_select.disabled = True
         num_shots_spinner.disabled = True
         from_spinner.disabled = True
         to_spinner.disabled = True
         step_spinner.disabled = True
         pos_spinner.disabled = True
-        push_fit_elog_button.disabled = True
         push_calib_elog_button.disabled = True
 
-    async def _unlock_gui():
-        device_select.disabled = False
-        num_shots_spinner.disabled = False
+    async def _calib_unlock_gui():
+        is_running["calib"] = False
+        if not any(is_running.values()):
+            device_select.disabled = False
+            num_shots_spinner.disabled = False
         from_spinner.disabled = False
         to_spinner.disabled = False
         step_spinner.disabled = False
@@ -289,11 +293,18 @@ def create(title):
         push_fit_elog_button.disabled = False
         push_calib_elog_button.disabled = False
 
-    async def _lock_update():
-        update_toggle.disabled = True
+    async def _live_lock_gui():
+        is_running["live"] = True
+        device_select.disabled = True
+        num_shots_spinner.disabled = True
+        push_fit_elog_button.disabled = True
 
-    async def _unlock_update():
-        update_toggle.disabled = False
+    async def _live_unlock_gui():
+        is_running["live"] = False
+        if not any(is_running.values()):
+            device_select.disabled = False
+            num_shots_spinner.disabled = False
+        push_fit_elog_button.disabled = False
 
     async def _update_calib_plot(x, wf):
         pv_x = pvs_x[device_select.value]
@@ -330,22 +341,16 @@ def create(title):
             wf_mean = scan_func(pv_name, scan_range, channels, numShots, calib_stop_event)
         except ValueError as e:
             log.error(e)
-            doc.add_next_tick_callback(_unlock_gui)
-            doc.add_next_tick_callback(_unlock_update)
-            return
         else:
             log.info(f"{device_name} calibrated")
-
-        doc.add_next_tick_callback(_unlock_gui)
-        doc.add_next_tick_callback(_unlock_update)
+        finally:
+            doc.add_next_tick_callback(_calib_unlock_gui)
 
     calib_stop_event = Event()
 
     def calibrate_button_callback(_attr, _old, new):
         if new:
-            doc.add_next_tick_callback(_lock_gui)
-            # extra lock update button
-            doc.add_next_tick_callback(_lock_update)
+            doc.add_next_tick_callback(_calib_lock_gui)
 
             calib_stop_event.clear()
             thread = Thread(target=_calibrate, args=(calib_stop_event,))
