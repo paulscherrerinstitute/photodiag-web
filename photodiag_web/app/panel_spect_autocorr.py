@@ -2,7 +2,7 @@ import asyncio
 from collections import deque
 from datetime import datetime
 from functools import partial
-from threading import Thread
+from threading import Event, Thread
 
 import epics
 import numpy as np
@@ -32,7 +32,7 @@ def create(title):
     doc = curdoc()
     log = doc.logger
 
-    def motor_scan(pv_name, scan_range, channels, numShots):
+    def motor_scan(pv_name, scan_range, channels, numShots, stop_event):
         motor = epics.Motor(pv_name)
         motor_init = motor.get_position()
 
@@ -56,11 +56,14 @@ def create(title):
 
             doc.add_next_tick_callback(partial(_update_calib_plot, pos, autocorr_mean_norm))
 
+            if stop_event.is_set():
+                break
+
         motor.move(motor_init, wait=True)
 
         return np.asarray(scan_mean)
 
-    def pv_scan(pv_name, scan_range, channels, numShots):
+    def pv_scan(pv_name, scan_range, channels, numShots, stop_event):
         pv = epics.PV(pv_name)
         pv_init = pv.value
         scan_mean = []
@@ -78,6 +81,9 @@ def create(title):
             scan_mean.append(autocorr_mean_norm)
 
             doc.add_next_tick_callback(partial(_update_calib_plot, pos, autocorr_mean_norm))
+
+            if stop_event.is_set():
+                break
 
         pv.put(pv_init, wait=True)
 
@@ -205,7 +211,7 @@ def create(title):
     def update_y(value, **_):
         buffer_autocorr.append(np.correlate(value, value, mode="same"))
 
-    num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, step=100, low=100)
+    num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, low=1)
     from_spinner = Spinner(title="From:")
     to_spinner = Spinner(title="To:")
     step_spinner = Spinner(title="Step:")
@@ -267,7 +273,6 @@ def create(title):
         to_spinner.disabled = True
         step_spinner.disabled = True
         pos_spinner.disabled = True
-        calibrate_button.disabled = True
         push_fit_elog_button.disabled = True
         push_calib_elog_button.disabled = True
 
@@ -279,6 +284,8 @@ def create(title):
         step_spinner.disabled = False
         pos_spinner.disabled = False
         calibrate_button.disabled = False
+        calibrate_button.label = "Calibrate"
+        calibrate_button.button_type = "primary"
         push_fit_elog_button.disabled = False
         push_calib_elog_button.disabled = False
 
@@ -303,7 +310,7 @@ def create(title):
     async def _reset_calib_plot():
         calib_line_source.data.update(x=[], y=[])
 
-    def _calibrate():
+    def _calibrate(calib_stop_event):
         device_name = device_select.value
         numShots = num_shots_spinner.value
 
@@ -320,7 +327,7 @@ def create(title):
             scan_func = pv_scan
 
         try:
-            wf_mean = scan_func(pv_name, scan_range, channels, numShots)
+            wf_mean = scan_func(pv_name, scan_range, channels, numShots, calib_stop_event)
         except ValueError as e:
             log.error(e)
             doc.add_next_tick_callback(_unlock_gui)
@@ -332,16 +339,29 @@ def create(title):
         doc.add_next_tick_callback(_unlock_gui)
         doc.add_next_tick_callback(_unlock_update)
 
-    def calibrate_button_callback():
-        doc.add_next_tick_callback(_lock_gui)
-        # extra lock update button
-        doc.add_next_tick_callback(_lock_update)
+    calib_stop_event = Event()
 
-        thread = Thread(target=_calibrate)
-        thread.start()
+    def calibrate_button_callback(_attr, _old, new):
+        if new:
+            doc.add_next_tick_callback(_lock_gui)
+            # extra lock update button
+            doc.add_next_tick_callback(_lock_update)
 
-    calibrate_button = Button(label="Calibrate", button_type="primary")
-    calibrate_button.on_click(calibrate_button_callback)
+            calib_stop_event.clear()
+            thread = Thread(target=_calibrate, args=(calib_stop_event,))
+            thread.start()
+
+            calibrate_button.label = "Stop"
+            calibrate_button.button_type = "danger"
+        else:
+            calib_stop_event.set()
+
+            calibrate_button.disabled = True
+            calibrate_button.label = "Stopping"
+            calibrate_button.button_type = "warning"
+
+    calibrate_button = Toggle(label="Calibrate", button_type="primary")
+    calibrate_button.on_change("active", calibrate_button_callback)
 
     async def _update_plots():
         nonlocal fit_result
