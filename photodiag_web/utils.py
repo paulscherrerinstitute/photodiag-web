@@ -54,7 +54,7 @@ def _make_arrays(pvs, n_pulses):
     return arrays
 
 
-def epics_collect_data(channels, n_pulses=100, wait_time=0.5):
+def epics_collect_data(channels, n_pulses=100):
     pvs = [epics.PV(ch) for ch in channels]
     counters = np.zeros(len(channels), dtype=int)
 
@@ -73,7 +73,7 @@ def epics_collect_data(channels, n_pulses=100, wait_time=0.5):
         pv.add_callback(callback=on_value_change, pv=pv, ichannel=i)
 
     while not np.all(counters == n_pulses):
-        time.sleep(wait_time)
+        time.sleep(0.5)
 
     return arrays
 

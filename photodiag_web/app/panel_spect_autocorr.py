@@ -28,56 +28,60 @@ model = GaussianModel(prefix="g0_") + GaussianModel(prefix="g1_") + GaussianMode
 FWHM_TO_SIGMA = 1 / (2 * np.sqrt(2 * np.log(2)))  # ~= 1 / 2.355
 
 
-def motor_scan(pv_name, scan_range, channels, numShots):
-    motor = epics.Motor(pv_name)
-    motor_init = motor.get_position()
-
-    scan_mean = []
-
-    for pos in scan_range:
-        val = motor.move(pos, wait=True)
-        if val != 0:
-            if val == -12:
-                raise ValueError(f"Motor position outside soft limits: {motor.LLM} {motor.HLM}")
-            raise ValueError(f"Error moving the motor {pv_name}, error value {val}")
-
-        data = epics_collect_data(channels, numShots)
-
-        autocorr = []
-        for wf in data[0]:
-            autocorr.append(np.correlate(wf, wf, mode="same"))
-        autocorr_mean = np.mean(autocorr, axis=0)
-        scan_mean.append(autocorr_mean / np.max(autocorr_mean))
-
-    motor.move(motor_init, wait=True)
-
-    return np.asarray(scan_mean)
-
-
-def pv_scan(pv_name, scan_range, channels, numShots):
-    pv = epics.PV(pv_name)
-    pv_init = pv.value
-    scan_mean = []
-
-    for pos in scan_range:
-        pv.put(pos, wait=True)
-
-        data = epics_collect_data(channels, numShots)
-
-        autocorr = []
-        for wf in data[0]:
-            autocorr.append(np.correlate(wf, wf, mode="same"))
-        autocorr_mean = np.mean(autocorr, axis=0)
-        scan_mean.append(autocorr_mean / np.max(autocorr_mean))
-
-    pv.put(pv_init, wait=True)
-
-    return np.asarray(scan_mean)
-
-
 def create(title):
     doc = curdoc()
     log = doc.logger
+
+    def motor_scan(pv_name, scan_range, channels, numShots):
+        motor = epics.Motor(pv_name)
+        motor_init = motor.get_position()
+
+        scan_mean = []
+
+        for pos in scan_range:
+            val = motor.move(pos, wait=True)
+            if val != 0:
+                if val == -12:
+                    raise ValueError(f"Motor position outside soft limits: {motor.LLM} {motor.HLM}")
+                raise ValueError(f"Error moving the motor {pv_name}, error value {val}")
+
+            data = epics_collect_data(channels, numShots)
+
+            autocorr = []
+            for wf in data[0]:
+                autocorr.append(np.correlate(wf, wf, mode="same"))
+            autocorr_mean = np.mean(autocorr, axis=0)
+            autocorr_mean_norm = autocorr_mean / np.max(autocorr_mean)
+            scan_mean.append(autocorr_mean_norm)
+
+            doc.add_next_tick_callback(partial(_update_calib_plot, pos, autocorr_mean_norm))
+
+        motor.move(motor_init, wait=True)
+
+        return np.asarray(scan_mean)
+
+    def pv_scan(pv_name, scan_range, channels, numShots):
+        pv = epics.PV(pv_name)
+        pv_init = pv.value
+        scan_mean = []
+
+        for pos in scan_range:
+            pv.put(pos, wait=True)
+
+            data = epics_collect_data(channels, numShots)
+
+            autocorr = []
+            for wf in data[0]:
+                autocorr.append(np.correlate(wf, wf, mode="same"))
+            autocorr_mean = np.mean(autocorr, axis=0)
+            autocorr_mean_norm = autocorr_mean / np.max(autocorr_mean)
+            scan_mean.append(autocorr_mean_norm)
+
+            doc.add_next_tick_callback(partial(_update_calib_plot, pos, autocorr_mean_norm))
+
+        pv.put(pv_init, wait=True)
+
+        return np.asarray(scan_mean)
 
     fit_result = None
     params = model.make_params(
@@ -284,22 +288,20 @@ def create(title):
     async def _unlock_update():
         update_toggle.disabled = False
 
-    async def _update_calib_plot(x, wfs):
+    async def _update_calib_plot(x, wf):
         pv_x = pvs_x[device_select.value]
         value = pv_x.value
         lags = value - value[int(value.size / 2)]
 
-        fwhm_spike = []
-        for wf in wfs:
-            fit_result = model.fit(wf, params, x=lags)
-            spike_fwhm = min(
-                fit_result.values["g0_fwhm"],
-                fit_result.values["g1_fwhm"],
-                fit_result.values["g2_fwhm"],
-            )
-            fwhm_spike.append(spike_fwhm / 1.4)
+        fit_result = model.fit(wf, params, x=lags)
+        spike_fwhm = min(
+            fit_result.values["g0_fwhm"], fit_result.values["g1_fwhm"], fit_result.values["g2_fwhm"]
+        )
 
-        calib_line_source.data.update(x=x, y=fwhm_spike)
+        calib_line_source.stream(dict(x=[x], y=[spike_fwhm / 1.4]))
+
+    async def _reset_calib_plot():
+        calib_line_source.data.update(x=[], y=[])
 
     def _calibrate():
         device_name = device_select.value
@@ -308,6 +310,8 @@ def create(title):
         pv_name = motor_textinput.value
         scan_range = np.arange(from_spinner.value, to_spinner.value, step_spinner.value)
         channels = [f"{device_name}:SPECTRUM_Y"]
+
+        doc.add_next_tick_callback(_reset_calib_plot)
 
         # TODO: find a simpler way to scan PVs and Motors
         if device_name == "SARFE10-PSSS059":
@@ -325,7 +329,6 @@ def create(title):
         else:
             log.info(f"{device_name} calibrated")
 
-        doc.add_next_tick_callback(partial(_update_calib_plot, x=scan_range, wfs=wf_mean))
         doc.add_next_tick_callback(_unlock_gui)
         doc.add_next_tick_callback(_unlock_update)
 
@@ -395,7 +398,7 @@ def create(title):
         lags = []
         buffer_autocorr.clear()
         doc.add_next_tick_callback(_update_plots)
-        doc.add_next_tick_callback(partial(_update_calib_plot, x=[], wfs=[]))
+        doc.add_next_tick_callback(_reset_calib_plot)
 
         # update default widget values
         dev_conf = config[new]
