@@ -10,6 +10,7 @@ from bokeh.layouts import column, row
 from bokeh.models import (
     Button,
     ColumnDataSource,
+    NumericInput,
     Select,
     Spacer,
     Spinner,
@@ -211,24 +212,26 @@ def create(title):
     def update_y(value, **_):
         buffer_autocorr.append(np.correlate(value, value, mode="same"))
 
-    num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, low=1)
-    from_spinner = Spinner(title="From:")
-    to_spinner = Spinner(title="To:")
-    step_spinner = Spinner(title="Step:")
+    num_shots_spinner = Spinner(title="Number shots:", mode="int", value=100, low=1, width=100)
+    from_spinner = Spinner(title="From:", width=100)
+    to_spinner = Spinner(title="To:", width=100)
+    step_spinner = Spinner(title="Step:", width=100)
     motor_textinput = TextInput(title="Motor:", disabled=True, width=300)
+    readback_numinput = NumericInput(title="Motor readback:", mode="float", disabled=True)
 
-    def pos_spinner_callback(_attr, _old, new):
-        if new is not None and pvs_m[device_select.value].value != new:
+    def move_button_callback():
+        if pos_spinner.value is not None:
             try:
-                pvs_m[device_select.value].put(new, wait=True)
+                pvs_m[device_select.value].put(pos_spinner.value, wait=False)
             except Exception as e:
                 log.error(e)
 
-    pos_spinner = Spinner(title="Postition:")
-    pos_spinner.on_change("value", pos_spinner_callback)
+    pos_spinner = Spinner(title="New position:", value=0, width=100)
+    move_button = Button(label="Move")
+    move_button.on_click(move_button_callback)
 
     async def _update_pos(value):
-        pos_spinner.value = value
+        readback_numinput.value = value
 
     def _motor_callback(value, **_):
         doc.add_next_tick_callback(partial(_update_pos, value))
@@ -276,6 +279,7 @@ def create(title):
         to_spinner.disabled = True
         step_spinner.disabled = True
         pos_spinner.disabled = True
+        move_button.disabled = True
         push_calib_elog_button.disabled = True
 
     async def _calib_unlock_gui():
@@ -287,10 +291,10 @@ def create(title):
         to_spinner.disabled = False
         step_spinner.disabled = False
         pos_spinner.disabled = False
+        move_button.disabled = False
         calibrate_button.disabled = False
         calibrate_button.label = "Calibrate"
         calibrate_button.button_type = "primary"
-        push_fit_elog_button.disabled = False
         push_calib_elog_button.disabled = False
 
     async def _live_lock_gui():
@@ -496,20 +500,23 @@ def create(title):
         fig_layout,
         row(
             device_select,
-            num_shots_spinner,
-            column(
-                Spacer(height=18),
-                row(
-                    Spacer(width=30),
-                    update_toggle,
-                    push_fit_elog_button,
-                    Spacer(width=30),
-                    calibrate_button,
-                    push_calib_elog_button,
-                ),
-            ),
+            motor_textinput,
+            readback_numinput,
+            pos_spinner,
+            column(Spacer(height=18), move_button),
         ),
-        row(motor_textinput, pos_spinner, from_spinner, to_spinner, step_spinner),
+        row(
+            num_shots_spinner,
+            Spacer(width=30),
+            column(Spacer(height=18), update_toggle),
+            column(Spacer(height=18), push_fit_elog_button),
+            Spacer(width=30),
+            from_spinner,
+            to_spinner,
+            step_spinner,
+            column(Spacer(height=18), calibrate_button),
+            column(Spacer(height=18), push_calib_elog_button),
+        ),
     )
 
     return TabPanel(child=tab_layout, title=title)
