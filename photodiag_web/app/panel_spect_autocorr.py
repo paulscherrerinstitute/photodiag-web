@@ -427,7 +427,7 @@ def create(title):
                 "Entry": "Info",
                 "Domain": domain,
                 "System": "Diagnostics",
-                "Title": f"{device_name} fit",
+                "Title": f"{device_name} Autocorrelation fit results",
             },
         )
         log.info(
